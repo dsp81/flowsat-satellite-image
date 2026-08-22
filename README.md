@@ -6,8 +6,8 @@
 
 **BMVC 2026**
 
-[**Project Page**](https://sustainability-lab.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
-[**Paper**](https://sustainability-lab.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
+[**Project Page**](https://dsp81.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
+[**Paper**](https://dsp81.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
 [**Quick Start**](#quick-start) &nbsp;|&nbsp;
 [**Use on Your Own Dataset**](docs/NEW_DATASET.md) &nbsp;|&nbsp;
 [**Captioning**](docs/CAPTIONING.md)
@@ -92,7 +92,7 @@ Three-seed variance: FID 31.53 ± 0.32, CLIP 0.3018 ± 0.0007.
 > interface and will work against the released package.
 
 ```bash
-git clone https://github.com/sustainability-lab/flowsat-satellite-image.git
+git clone https://github.com/dsp81/flowsat-satellite-image.git
 cd flowsat-satellite-image
 conda env create -f environment.yml && conda activate flowsat
 ```
