@@ -12,8 +12,7 @@
 [**Use on Your Own Dataset**](docs/NEW_DATASET.md) &nbsp;|&nbsp;
 [**Captioning**](docs/CAPTIONING.md)
 
-<!-- TODO(camera-ready): confirm author order and affiliations before 28 Aug -->
-Digvijay Singh Parihar · Rishabh · Nipun Batra · Shanmuganathan Raman
+Digvijay Singh Parihar · Rishabh Mondal · Nipun Batra
 
 Sustainability Lab, IIT Gandhinagar
 
@@ -153,8 +152,7 @@ commands to train and evaluate on a new corpus.
 @inproceedings{parihar2026flowsat,
   title     = {FlowSat: Flow-Matching Diffusion Transformers with Metadata
                Conditioning for Satellite Image Generation},
-  author    = {Parihar, Digvijay Singh and Rishabh and Batra, Nipun and
-               Raman, Shanmuganathan},
+  author    = {Parihar, Digvijay Singh and Mondal, Rishabh and Batra, Nipun},
   booktitle = {British Machine Vision Conference (BMVC)},
   year      = {2026}
 }
