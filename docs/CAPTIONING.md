@@ -108,6 +108,9 @@ block — and the metadata pathway is starved of gradient. At inference, varying
 lat/lon then appears to do very little. That is the model behaving correctly
 given what it was taught, not a bug.
 
+See [What Makes a Model Metadata-Controllable](METADATA_CONTROLLABILITY.md)
+for the full discussion of this trade-off.
+
 So decide deliberately:
 
 | goal | caption should |

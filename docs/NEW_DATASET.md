@@ -312,6 +312,8 @@ same variance that latitude and month would explain, and metadata conditioning
 will appear weak — correctly so, because there is nothing left for it to
 explain. Let text describe *content* and metadata supply *context*, or test
 controllability with short/empty prompts where text is silent.
+See [What Makes a Model Metadata-Controllable](METADATA_CONTROLLABILITY.md)
+for the full discussion, including how to choose fields that stay controllable.
 
 ### 7. Keep metadata inside its normalised range
 Values outside `[0, 1000]` are extrapolation. The most common cause is a GSD
