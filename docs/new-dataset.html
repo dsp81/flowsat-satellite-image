@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Using FlowSat on a New Dataset — FlowSat</title>
+<meta name="description" content="The adapter contract, metadata normalisation convention and commands for training FlowSat on a corpus of your own.">
+<meta property="og:title" content="Using FlowSat on a New Dataset — FlowSat">
+<meta property="og:description" content="The adapter contract, metadata normalisation convention and commands for training FlowSat on a corpus of your own.">
+<meta property="og:url" content="https://dsp81.github.io/flowsat-satellite-image/new-dataset.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/doc.css">
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="./">FlowSat</a>
+  <span class="links" style="display:flex;gap:22px">
+    <a href="./#explore">Explore</a><a href="./#method">Method</a>
+    <a href="./#results">Results</a><a href="./#start">Get started</a>
+  </span>
+  <a href="https://github.com/dsp81/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+</div></nav>
+
+<header class="doc"><div class="wrap">
+  <p class="kicker">Guide</p>
+  <h1>Using FlowSat on a New Dataset</h1>
+  <p class="sub">The adapter contract, metadata normalisation convention and commands for training FlowSat on a corpus of your own.</p>
+</div></header>
+
+<div class="wrap">
+  <div class="layout">
+    <article>
+      <p>FlowSat is not tied to FMoW. Anything that can produce <strong>(image, caption,
+      metadata)</strong> triples — Sentinel-2 tiles, NAIP, SpaceNet, an internal corpus —
+      plugs in by implementing <strong>one class with one method</strong>.</p>
+      <p>This document gives the interface contract, a copy-paste template, the metadata
+      convention, the commands to train and evaluate, and a list of failure modes that
+      cost us real time. Read the <a href="#pitfalls-read-this-before-you-train">pitfalls</a>
+      section before your first long run; every item there is something that silently
+      degrades results rather than raising an error.</p>
+      <hr />
+      <h2 id="1-the-contract">1. The contract</h2>
+      <p>Your dataset is a standard <code>torch.utils.data.Dataset</code> whose <code>__getitem__</code>
+      returns a dict with exactly three keys:</p>
+      <pre><code class="language-python">{
+          &quot;pixel_values&quot;: torch.Tensor,   # (3, H, W)  float, normalised to [-1, 1]
+          &quot;input_ids&quot;:    torch.Tensor,   # (L,)       long, tokenised caption
+          &quot;metadata&quot;:     torch.Tensor,   # (7,)       float, normalised (see §2)
+      }
+      </code></pre>
+      <p>That is the entire interface. Everything else — VAE encoding, text encoding,
+      flow-matching, CFG dropout, EMA, checkpointing — is handled by the training
+      loop and does not need to change.</p>
+      <p><strong>If your data has no metadata</strong>, pass zeros for the unused fields <em>and</em> train
+      with <code>--num_metadata 0</code>. Do <strong>not</strong> pass a zero vector while metadata
+      conditioning is enabled: after normalisation, zero is not "unknown", it decodes
+      to a specific and wrong assertion (lon = −180°, lat = −90°, year = 1980). See
+      <a href="#4-zero-is-not-unknown">pitfall 4</a>.</p>
+      <hr />
+      <h2 id="2-metadata-convention">2. Metadata convention</h2>
+      <p>Seven fields, each normalised to approximately <code>[0, 1000]</code>:</p>
+      <table>
+      <thead>
+      <tr>
+      <th>idx</th>
+      <th>field</th>
+      <th>raw range</th>
+      <th>normalisation</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>0</td>
+      <td>longitude</td>
+      <td>−180 … 180</td>
+      <td><code>(lon + 180) / 360 * 1000</code></td>
+      </tr>
+      <tr>
+      <td>1</td>
+      <td>latitude</td>
+      <td>−90 … 90</td>
+      <td><code>(lat + 90) / 180 * 1000</code></td>
+      </tr>
+      <tr>
+      <td>2</td>
+      <td>GSD (m/px)</td>
+      <td>0 … <code>max_gsd</code></td>
+      <td><code>gsd / max_gsd * 1000</code></td>
+      </tr>
+      <tr>
+      <td>3</td>
+      <td>cloud cover</td>
+      <td>0 … 1</td>
+      <td><code>cloud * 1000</code></td>
+      </tr>
+      <tr>
+      <td>4</td>
+      <td>year</td>
+      <td>1980 … 2100</td>
+      <td><code>(year − 1980) / 120 * 1000</code></td>
+      </tr>
+      <tr>
+      <td>5</td>
+      <td>month</td>
+      <td>1 … 12</td>
+      <td><code>month / 12 * 1000</code></td>
+      </tr>
+      <tr>
+      <td>6</td>
+      <td>day</td>
+      <td>1 … 31</td>
+      <td><code>day / 31 * 1000</code></td>
+      </tr>
+      </tbody>
+      </table>
+      <p>Use the provided helper rather than hand-rolling this:</p>
+      <pre><code class="language-python">from flowsat.data.sat_data_util import metadata_normalize
+      md = metadata_normalize(torch.tensor([lon + 180, lat + 90, gsd, cloud,
+                                            year - 1980, month, day]),
+                              max_gsd=YOUR_MAX_GSD)
+      </code></pre>
+      <p><strong><code>max_gsd</code> must match between training, evaluation, and generation.</strong> It is the
+      one free parameter in the scheme, and a mismatch silently shifts the entire GSD
+      axis. Record it alongside your checkpoint.</p>
+      <p><strong>Fields your dataset lacks.</strong> Keep the 7-dim layout and fill missing fields with
+      a plausible in-distribution constant (e.g. cloud = 0, day = 15), not zero. If a
+      field is <em>always</em> constant it carries no information and the model will ignore
+      it, which is the correct outcome.</p>
+      <hr />
+      <h2 id="3-template-adapter">3. Template adapter</h2>
+      <p>Copy to <code>flowsat/data/my_dataset.py</code> and fill in the three marked sections.</p>
+      <pre><code class="language-python">&quot;&quot;&quot;Adapter template: MyDataset -&gt; FlowSat.&quot;&quot;&quot;
+      from pathlib import Path
+      from typing import Any, Dict
+
+      import torch
+      from torch.utils.data import Dataset
+      from torchvision import transforms
+
+      from .sat_data_util import metadata_normalize
+
+
+      class MyDataset(Dataset):
+          def __init__(self, root_dir, tokenizer, resolution=512,
+                       max_gsd=1.0, caption_dir=None, transform=None):
+              self.root = Path(root_dir)
+              self.tokenizer = tokenizer
+              self.resolution = resolution
+              self.max_gsd = max_gsd
+              self.caption_dir = Path(caption_dir) if caption_dir else None
+
+              self.transform = transform or transforms.Compose([
+                  transforms.ToTensor(),
+                  transforms.Resize(resolution, antialias=True),
+                  transforms.CenterCrop(resolution),
+                  transforms.Normalize([0.5], [0.5]),          # -&gt; [-1, 1]
+              ])
+
+              # ---- (1) BUILD YOUR SAMPLE INDEX ---------------------------------
+              # A list of whatever you need to load one example later. Keep it
+              # deterministic (sort it) so shards and resumes are reproducible.
+              self.samples = sorted(self.root.rglob(&quot;*.tif&quot;))
+              assert self.samples, f&quot;no samples under {self.root}&quot;
+
+          def __len__(self):
+              return len(self.samples)
+
+          def __getitem__(self, idx) -&gt; Dict[str, torch.Tensor]:
+              rec = self.samples[idx]
+
+              # ---- (2) LOAD IMAGE + RAW METADATA -------------------------------
+              # Return an (H, W, 3) uint8 array. For multi-band sources, select or
+              # composite to RGB here — the released weights are RGB-only.
+              img = self._read_image(rec)                        # (H, W, 3) uint8
+              lon, lat, gsd, cloud, year, month, day = self._read_metadata(rec)
+
+              # ---- (3) CAPTION -------------------------------------------------
+              # Match the caption style you will use at inference time (pitfall 1).
+              caption = self._caption(rec)
+
+              md = metadata_normalize(
+                  torch.tensor([lon + 180.0, lat + 90.0, gsd, cloud,
+                                float(year - 1980), float(month), float(day)]),
+                  max_gsd=self.max_gsd)
+
+              ids = self.tokenizer(
+                  caption, max_length=self.tokenizer.model_max_length,
+                  padding=&quot;max_length&quot;, truncation=True, return_tensors=&quot;pt&quot;,
+              ).input_ids.squeeze(0)
+
+              return {&quot;pixel_values&quot;: self.transform(img),
+                      &quot;input_ids&quot;: ids,
+                      &quot;metadata&quot;: md}
+
+          # ------------------------------------------------------------------
+          def _read_image(self, rec):
+              import numpy as np, rasterio
+              with rasterio.open(rec) as src:
+                  a = src.read()[:3].transpose(1, 2, 0)
+              if a.dtype != np.uint8:                # 16-bit / float -&gt; 8-bit
+                  lo, hi = np.percentile(a, [2, 98], axis=(0, 1), keepdims=True)
+                  a = np.clip((a - lo) / np.maximum(hi - lo, 1e-6), 0, 1)
+                  a = (a * 255).astype(np.uint8)
+              return a
+
+          def _read_metadata(self, rec) -&gt; Any:
+              raise NotImplementedError(&quot;return (lon, lat, gsd, cloud01, year, month, day)&quot;)
+
+          def _caption(self, rec) -&gt; str:
+              if self.caption_dir:
+                  p = (self.caption_dir / rec.relative_to(self.root)).with_suffix(&quot;.txt&quot;)
+                  if p.exists():
+                      t = p.read_text(encoding=&quot;utf-8&quot;).strip()
+                      if len(t) &gt; 10:
+                          return t
+              return &quot;a satellite image&quot;
+
+
+      def my_collate_fn(examples):
+          return {
+              &quot;pixel_values&quot;: torch.stack([e[&quot;pixel_values&quot;] for e in examples])
+                                   .to(memory_format=torch.contiguous_format).float(),
+              &quot;input_ids&quot;:    torch.stack([e[&quot;input_ids&quot;] for e in examples]),
+              &quot;metadata&quot;:     torch.stack([e[&quot;metadata&quot;] for e in examples]),
+          }
+      </code></pre>
+      <h3>Verify the adapter before training</h3>
+      <p>Five minutes here saves a wasted run:</p>
+      <pre><code class="language-python">ds = MyDataset(root, tokenizer, max_gsd=1.0)
+      b = ds[0]
+      assert b[&quot;pixel_values&quot;].shape == (3, 512, 512)
+      assert -1.01 &lt;= b[&quot;pixel_values&quot;].min() and b[&quot;pixel_values&quot;].max() &lt;= 1.01
+      assert b[&quot;metadata&quot;].shape == (7,)
+      assert (b[&quot;metadata&quot;] &gt;= -1e-3).all() and (b[&quot;metadata&quot;] &lt;= 1000 + 1e-3).all(), \
+          f&quot;metadata outside [0,1000]: {b['metadata']}&quot;     # usually a max_gsd error
+      print(tokenizer.decode(b[&quot;input_ids&quot;], skip_special_tokens=True)[:300])
+      </code></pre>
+      <p>Also print the caption <strong>token-length histogram</strong> across ~1000 samples and
+      compare it with <code>--t5_max_length</code>. If the 90th percentile exceeds it, most of
+      your captions are being silently truncated (pitfall 2).</p>
+      <hr />
+      <h2 id="4-registration">4. Registration</h2>
+      <pre><code class="language-python"># flowsat/data/__init__.py
+      from .fmow_dataset import FMoWDataset, flowsat_collate_fn
+      from .my_dataset  import MyDataset,  my_collate_fn
+
+      DATASETS = {
+          &quot;fmow&quot;: (FMoWDataset, flowsat_collate_fn),
+          &quot;mine&quot;: (MyDataset,   my_collate_fn),
+      }
+      </code></pre>
+      <p>Then <code>--dataset mine</code> selects it.</p>
+      <hr />
+      <h2 id="5-train">5. Train</h2>
+      <p>Fine-tuning from the released FlowSat checkpoint is strongly preferred over
+      training from the raw Sana initialisation — the released weights already carry
+      satellite priors, and convergence is several times faster.</p>
+      <pre><code class="language-bash">accelerate launch --num_processes=&lt;N&gt; --mixed_precision=bf16 \
+        -m flowsat.training.train \
+        --dataset mine --data_root /path/to/data --caption_dir /path/to/captions \
+        --pretrained  &lt;sana-snapshot-dir&gt; \
+        --resume_from checkpoints/flowsat-fmow-512 \
+        --output_dir  runs/mine \
+        --resolution 512 --max_gsd &lt;YOUR_MAX_GSD&gt; \
+        --num_metadata 7 --use_satclip_encoder \
+        --train_batch_size 8 --gradient_accumulation_steps 2 \
+        --learning_rate 1e-5 --lr_scheduler cosine --lr_warmup_steps 1000 \
+        --max_train_steps 50000 --gradient_checkpointing \
+        --checkpointing_steps 5000 --validation_steps 2500 --use_ema
+      </code></pre>
+      <p>Watch in the first 500 steps:</p>
+      <ul>
+      <li>the load line reports <strong>~0 missing / ~0 unexpected</strong> keys;</li>
+      <li>the first loss is finite;</li>
+      <li>validation images are coherent (not colour noise) by ~2k steps.</li>
+      </ul>
+      <h2 id="6-evaluate">6. Evaluate</h2>
+      <pre><code class="language-bash">python -m flowsat.evaluation.evaluate \
+        --ckpt runs/mine/checkpoint-50000 \
+        --dataset mine --data_root /path/to/data \
+        --metrics fid,clip --n_samples 5000 --steps 20 --cfg 2.5
+      </code></pre>
+      <p>FID is only comparable within a fixed protocol. To compare against a published
+      number you must match <strong>the same reference statistics, the same sample count,
+      the same preprocessing, and the same CLIP variant</strong>. Recomputing reference stats
+      on a different split silently changes the number by several points.</p>
+      <h2 id="7-measure-controllability">7. Measure controllability</h2>
+      <p>The claim FlowSat makes is not only image quality but <em>metadata control</em>. To
+      test it on your data, sweep one field with caption and noise held fixed:</p>
+      <pre><code class="language-bash">python -m flowsat.evaluation.controllability \
+        --ckpt runs/mine/checkpoint-50000 \
+        --axis month --values 1,4,7,10 --n_seeds 4 \
+        --prompt-regime rich,short,empty
+      </code></pre>
+      <p>This reports divergence across the sweep, separated into <strong>tonal</strong> (colour and
+      contrast) and <strong>structural</strong> (content) components. The distinction matters: a
+      model can tint an image in response to metadata without changing what is
+      depicted, and only the structural component supports a controllability claim.</p>
+      <hr />
+      <h2 id="pitfalls-read-this-before-you-train">Pitfalls (read this before you train)</h2>
+      <h3>1. Caption style must match between training and inference</h3>
+      <p>The largest single quality factor. If you train predominantly on long dense
+      captions and then generate from <code>"a satellite image of a port"</code>, you are
+      sampling an under-represented mode and output quality drops visibly. Decide your
+      caption distribution up front and use the same distribution at inference. If you
+      need both, train with an explicit mixture (we use ~40% rich / 30% short / 30%
+      empty) so both modes are supported.</p>
+      <h3>2. Token truncation is silent</h3>
+      <p><code>--t5_max_length</code> truncates without warning. A 200-word caption is ~260 tokens;
+      at the default of 120 more than half of it — typically the spatial and
+      object-level detail at the end — never reaches the model. Print a token-length
+      histogram and set the limit above your 90th percentile.</p>
+      <h3>3. Empty-caption samples are what train the metadata pathway</h3>
+      <p>If every training sample has a caption, text explains most of the variance and
+      the metadata pathway is starved of gradient. A meaningful fraction of
+      caption-free samples (~30%) is what forces metadata to carry information on its
+      own.</p>
+      <h3>4. Zero is not "unknown"</h3>
+      <p>For metadata dropout, do <strong>not</strong> multiply the metadata vector by zero. After
+      normalisation zero decodes to lon = −180°, lat = −90°, year = 1980 — a confident
+      wrong assertion, not an absence. Per-field zeroing at p = 0.1 over 7 fields
+      corrupts ~52% of samples and teaches the model to distrust metadata entirely.
+      Use the learned null-metadata embedding instead (<code>--metadata_drop_prob</code>, applied
+      per sample).</p>
+      <h3>5. Classifier-free guidance: guide text, not metadata magnitude</h3>
+      <p>Pass <strong>real</strong> metadata to both CFG branches and guide only the text direction,
+      or use a proper three-branch formulation with a learned null. Substituting a
+      zero metadata vector for the unconditional branch puts that branch out of
+      distribution and corrupts the guidance direction.</p>
+      <h3>6. Caption redundancy suppresses metadata control</h3>
+      <p>If your captions already state the terrain, climate, or season, they cover the
+      same variance that latitude and month would explain, and metadata conditioning
+      will appear weak — correctly so, because there is nothing left for it to
+      explain. Let text describe <em>content</em> and metadata supply <em>context</em>, or test
+      controllability with short/empty prompts where text is silent.
+      See <a href="controllability.html">What Makes a Model Metadata-Controllable</a>
+      for the full discussion, including how to choose fields that stay controllable.</p>
+      <h3>7. Keep metadata inside its normalised range</h3>
+      <p>Values outside <code>[0, 1000]</code> are extrapolation. The most common cause is a GSD
+      sweep exceeding <code>max_gsd</code> (3.0 m with <code>max_gsd = 1.0</code> normalises to 3000).
+      Assert the range in your adapter.</p>
+      <h3>8. Validation with a fixed seed measures one sample</h3>
+      <p>A fixed noise seed makes progress easy to eyeball but hides diversity and mode
+      collapse — you watch one composition sharpen forever. Vary the seed across
+      validations; keep it fixed <em>within</em> a metadata sweep so the metadata remains the
+      only variable.</p>
+      <hr />
+      <h2 id="getting-help">Getting help</h2>
+      <p>Open an issue with your adapter's verification output (shapes, metadata range,
+      caption histogram) and the first 50 lines of your training log. Those three
+      things identify most integration problems immediately.</p>
+      <div class="backrow">
+        <a href="./">&#8592; Project page</a>
+        <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/NEW_DATASET.md">View this page on GitHub</a>
+      </div>
+    </article>
+    <aside class="toc">
+      <p class="t">On this page</p>
+      <a href="#1-the-contract">1. The contract</a>
+      <a href="#2-metadata-convention">2. Metadata convention</a>
+      <a href="#3-template-adapter">3. Template adapter</a>
+      <a href="#4-registration">4. Registration</a>
+      <a href="#5-train">5. Train</a>
+      <a href="#6-evaluate">6. Evaluate</a>
+      <a href="#7-measure-controllability">7. Measure controllability</a>
+      <a href="#pitfalls-read-this-before-you-train">Pitfalls (read this before you train)</a>
+      <a href="#getting-help">Getting help</a>
+    </aside>
+  </div>
+</div>
+
+<footer><div class="wrap">
+  <p>Built on <a href="https://github.com/NVlabs/Sana">Sana</a>,
+    <a href="https://github.com/mit-han-lab/efficientvit">DC-AE</a> and
+    <a href="https://huggingface.co/google/gemma-2-2b-it">Gemma-2</a>.
+    Location encoding follows <a href="https://github.com/microsoft/satclip">SatCLIP</a>.</p>
+  <p>Sustainability Lab &#183; IIT Gandhinagar</p>
+</div></footer>
+
+</body>
+</html>

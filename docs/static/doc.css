@@ -1,0 +1,76 @@
+/* Documentation pages — shares the palette and typography of index.html.
+   Generated pages link this file; edit here, not in the generated HTML. */
+:root{
+  --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
+  --acc:#0b6b57; --accs:#e6f2ef; --max:1000px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:76px}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
+nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;color:var(--ink)}
+nav .brand:hover{text-decoration:none}
+nav a{color:var(--mut);font-size:14.5px;font-weight:500}
+nav a:hover{color:var(--ink);text-decoration:none}
+@media(max-width:700px){nav .links{display:none}}
+
+header.doc{padding:52px 0 30px;border-bottom:1px solid var(--line)}
+.kicker{color:var(--acc);font-size:13px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;margin:0 0 10px}
+header.doc h1{font-size:clamp(30px,4.4vw,42px);line-height:1.12;font-weight:700;
+  letter-spacing:-.024em;margin:0 0 12px}
+header.doc .sub{font-size:18px;color:var(--mut);max-width:720px;margin:0}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:44px;
+  align-items:start;padding:40px 0 10px}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr);gap:0}}
+
+article{max-width:760px;min-width:0}
+article h2{font-size:25px;font-weight:650;letter-spacing:-.016em;margin:42px 0 12px;
+  padding-top:6px}
+article h2:first-child{margin-top:0}
+article h3{font-size:18.5px;font-weight:600;margin:30px 0 10px}
+article p{margin:0 0 16px}
+article ul,article ol{margin:0 0 18px;padding-left:22px}
+article li{margin:0 0 9px}
+article li>ul,article li>ol{margin:9px 0 0}
+article strong{font-weight:650}
+article hr{border:none;border-top:1px solid var(--line);margin:34px 0}
+article blockquote{margin:20px 0;padding:14px 18px;background:var(--accs);
+  border-left:3px solid var(--acc);border-radius:0 9px 9px 0;color:#28303a}
+article blockquote p:last-child{margin:0}
+
+table{width:100%;border-collapse:collapse;font-size:15.5px;margin:18px 0 24px;
+  display:block;overflow-x:auto;white-space:normal}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);
+  vertical-align:top}
+th{font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--mut);white-space:nowrap}
+
+pre{background:#0f1216;color:#e9edf2;padding:18px 20px;border-radius:11px;
+  overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13.5px;
+  line-height:1.62;margin:0 0 18px}
+pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em}
+p code,li code,td code,h2 code,h3 code{background:var(--soft);padding:2px 6px;
+  border-radius:5px;border:1px solid var(--line)}
+
+.toc{position:sticky;top:80px;font-size:14px;line-height:1.5}
+.toc .t{font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--mut);margin:0 0 12px}
+.toc a{display:block;color:var(--mut);padding:5px 0 5px 12px;
+  border-left:2px solid var(--line)}
+.toc a:hover{color:var(--ink);border-left-color:var(--acc);text-decoration:none}
+@media(max-width:900px){.toc{display:none}}
+
+.backrow{border-top:1px solid var(--line);padding:26px 0 0;margin-top:40px;
+  display:flex;gap:18px;flex-wrap:wrap;font-size:15px}
+footer{padding:34px 0 56px;text-align:center;color:var(--mut);font-size:14.5px}
+footer p{margin:0 0 6px}

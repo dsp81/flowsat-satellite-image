@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What Makes a Model Metadata-Controllable — FlowSat</title>
+<meta name="description" content="Why metadata conditioning succeeds or silently fails, and how to design a dataset, caption regime and metadata schema that leave room for control.">
+<meta property="og:title" content="What Makes a Model Metadata-Controllable — FlowSat">
+<meta property="og:description" content="Why metadata conditioning succeeds or silently fails, and how to design a dataset, caption regime and metadata schema that leave room for control.">
+<meta property="og:url" content="https://dsp81.github.io/flowsat-satellite-image/controllability.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/doc.css">
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="./">FlowSat</a>
+  <span class="links" style="display:flex;gap:22px">
+    <a href="./#explore">Explore</a><a href="./#method">Method</a>
+    <a href="./#results">Results</a><a href="./#start">Get started</a>
+  </span>
+  <a href="https://github.com/dsp81/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+</div></nav>
+
+<header class="doc"><div class="wrap">
+  <p class="kicker">Guide</p>
+  <h1>What Makes a Model Metadata-Controllable</h1>
+  <p class="sub">Why metadata conditioning succeeds or silently fails, and how to design a dataset, caption regime and metadata schema that leave room for control.</p>
+</div></header>
+
+<div class="wrap">
+  <div class="layout">
+    <article>
+      <p>Metadata conditioning either works or quietly does nothing, and the difference
+      is rarely the architecture. This page collects what we learned building
+      FlowSat, so you can design a dataset, a caption regime and a metadata schema
+      that leave room for control rather than accidentally engineering it away.</p>
+      <h2 id="controllability-is-a-competition-for-residual-variance">Controllability is a competition for residual variance</h2>
+      <p>A generative model has to explain the variation in its training images. Every
+      conditioning signal competes to do that explaining, and the cheapest route
+      wins. Text is very cheap: it arrives through a large pretrained encoder and is
+      cross-attended at every block. Metadata is expensive: it arrives as a small
+      learned embedding through a narrow injection path.</p>
+      <p>So if a caption already states what a metadata field encodes, that field
+      becomes redundant during training. Gradient descent routes around it, the
+      metadata pathway is starved, and at inference the field appears inert. The
+      model is behaving correctly — there was simply nothing left for it to explain.</p>
+      <p>The practical formulation: <strong>metadata controllability is inversely proportional
+      to how much your captions cover that metadata's own domain.</strong> Note this is
+      about <em>overlap</em>, not <em>richness</em>. A 300-word caption describing rooftop
+      geometry, pavement texture and parking layout is dense but leaves latitude's
+      variance untouched. A 30-word caption saying "an arid Egyptian site in winter"
+      is short and destroys it. Length is a proxy; overlap is the mechanism.</p>
+      <h2 id="the-dataset-decides-what-is-possible">The dataset decides what is possible</h2>
+      <p>Before blaming a model, check the data contains what you are asking for.</p>
+      <p>FMoW is a functional land-use dataset: 62 categories of human infrastructure,
+      every image centred on a built landmark. It has no desert, forest or tundra
+      class. Asking a FMoW-trained model to turn "Sahara" coordinates into sand
+      dunes is asking for an image that does not exist in its training distribution.
+      What <em>is</em> learnable is regional style within a category — roof colour and
+      material, building density, street and field geometry, ground tone.</p>
+      <p>Coverage matters as much as content. FMoW spans 207 countries but is heavily
+      weighted towards Western ones, and locations were deliberately thinned during
+      collection, so per-region density is low. A field can only be controllable
+      where the data supports it.</p>
+      <p>Two consequences for evaluation. Always include a <strong>well-represented control</strong>
+      in any sweep: if dense-coverage locations respond and sparse ones do not, that
+      is a coverage result, not a model failure, and you cannot tell the two apart
+      without both. And state the label space honestly — "the same category rendered
+      in a different regional style" is a defensible claim; "we generate any biome on
+      demand" is not.</p>
+      <h2 id="designing-the-training-caption-regime">Designing the training caption regime</h2>
+      <p>Use a mixture, not a single style. FlowSat trains on roughly:</p>
+      <table>
+      <thead>
+      <tr>
+      <th>bucket</th>
+      <th>share</th>
+      <th>why</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>rich VLM caption</td>
+      <td>40%</td>
+      <td>image quality and text fidelity</td>
+      </tr>
+      <tr>
+      <td>short template caption</td>
+      <td>30%</td>
+      <td>keeps brief prompts in distribution</td>
+      </tr>
+      <tr>
+      <td><strong>empty caption</strong></td>
+      <td><strong>30%</strong></td>
+      <td><strong>the only regime where metadata must carry the load alone</strong></td>
+      </tr>
+      </tbody>
+      </table>
+      <p>The empty bucket is the one people omit. With no caption-free samples, text
+      explains nearly all the variance and the metadata pathway never has to do
+      anything. Below about ten percent, metadata conditioning tends to stay weak.
+      Our earlier 70/20/10 split gave only 10% caption-free samples and produced
+      visibly weaker metadata response than 40/30/30.</p>
+      <p>Two more rules. Make dropout <strong>per sample, not per field</strong>, and drop to a
+      <em>learned null embedding</em> rather than to zeros — after normalisation, zero is
+      not "unknown", it is a confident wrong assertion (longitude −180°, latitude
+      −90°, year 1980). Per-field zeroing at p=0.1 over seven fields corrupts about
+      half your samples and actively teaches the model that metadata lies. And keep
+      captions <strong>disentangled</strong>: if they never distinguish "white cloud" from "brown
+      haze" from "low contrast", the model collapses them into one concept and a
+      request for cloud cover returns a muddy image instead of clouds.</p>
+      <h2 id="designing-the-inference-prompt">Designing the inference prompt</h2>
+      <p>The same competition operates at generation time. If you want a metadata field
+      to visibly steer the output, do not describe that field's domain in the prompt:</p>
+      <ul>
+      <li><strong>Short or empty prompts</strong> give metadata the most room. "A stadium" is
+        ambiguous about where; coordinates can resolve it.</li>
+      <li><strong>Rich structural prompts</strong> — dense about shapes, materials and layout,
+        silent about place, climate and season — retain control while keeping
+        quality. This is usually the best operating point.</li>
+      <li><strong>Rich contextual prompts</strong> that state terrain, climate or region will
+        dominate the metadata, and should.</li>
+      </ul>
+      <p>When demonstrating controllability, hold the caption and the noise seed fixed
+      and vary exactly one field. Any other protocol confounds the result.</p>
+      <h2 id="adding-a-new-metadata-field-choose-orthogonal-features">Adding a new metadata field: choose orthogonal features</h2>
+      <p>The single best predictor of whether a new field will be controllable is the
+      oldest idea in feature selection: <strong>is it independent of what you already
+      have?</strong> A field earns its place only if its variance is not already explained
+      by another metadata field or by the captions.</p>
+      <p><strong>Ground sample distance is the worked example.</strong> GSD is the most reliably
+      controllable field in FlowSat, and it required no special encoder design, no
+      tuning, no extra loss term. It works because it is close to perfectly
+      orthogonal to everything else in the conditioning:</p>
+      <ul>
+      <li><strong>No caption ever states it.</strong> No VLM writes "0.5 m per pixel". Its variance
+        is invisible to the text pathway, so text cannot explain it away.</li>
+      <li><strong>It is uncorrelated with the other fields.</strong> Resolution is a property of the
+        sensor and the acquisition, not of latitude, month or cloud cover. Nothing
+        else in the vector predicts it.</li>
+      <li><strong>Its visual effect is monotonic and unambiguous.</strong> Finer GSD means finer
+        detail, everywhere, with no confounds.</li>
+      </ul>
+      <p>Because nothing else could account for that variation, the model was forced to
+      use the GSD channel, and it learned it almost immediately.</p>
+      <p>Now contrast the fields that struggle. <strong>Latitude and longitude</strong> are heavily
+      correlated with country names, climate words and terrain descriptions that
+      captions routinely contain — so text explains them away. <strong>Month</strong> is
+      correlated with any season word in a caption, and its effect is confounded
+      with latitude (July is summer at 45°N and winter at 35°S), so month alone is
+      not even a well-defined visual quantity. <strong>Cloud cover</strong> is correlated with
+      haze, contrast and colour saturation, which captions describe constantly; if
+      the captions never separate "white cloud" from "brown haze", cloud cover
+      collapses into a global muddiness control.</p>
+      <p>So before adding a field, ask three questions:</p>
+      <ol>
+      <li><strong>Do my captions describe it?</strong> If yes, either remove it from the captions
+         or accept that the field will be weak.</li>
+      <li><strong>Is it predictable from another field?</strong> If yes, the model will use the
+         cheaper one, and the new field adds parameters without adding control.</li>
+      <li><strong>Does it have a consistent visual signature on its own?</strong> If its effect
+         depends on another field (month depends on hemisphere), condition on the
+         <em>derived</em> quantity — solar season rather than raw month — so the field means
+         one thing.</li>
+      </ol>
+      <p>A field that passes all three needs no special treatment. A field that fails
+      any of them needs the <em>data</em> fixed, not the architecture.</p>
+      <h2 id="diagnosing-weak-controllability">Diagnosing weak controllability</h2>
+      <p>In order, because each is cheaper than the next:</p>
+      <ol>
+      <li><strong>Sweep with an empty prompt.</strong> If the field responds with no text but not
+         with a caption, you have an overlap problem, not a model problem.</li>
+      <li><strong>Check the injection gate magnitudes.</strong> Compare the metadata projection
+         weights against a trained backbone weight of similar role. Weights one to
+         two orders of magnitude smaller mean the pathway is alive but too weak — a
+         learning-rate problem, since a freshly initialised adapter cannot catch a
+         pretrained backbone at the same LR.</li>
+      <li><strong>Separate tonal from structural response.</strong> Measure colour difference and
+         structural similarity across a sweep separately. Large colour change with no
+         structural change means the global modulation path works but nothing is
+         reaching spatial content — a real result, and a much narrower claim than
+         "controllable".</li>
+      <li><strong>Only then change the encoder.</strong> Verify any positional encoding on real
+         inputs: check that nearby coordinates produce nearby embeddings and distant
+         ones produce distant embeddings. A mis-specified frequency ladder can turn a
+         geographic encoder into a hash of position, which trains without error and
+         generalises to nothing.</li>
+      </ol>
+      <div class="backrow">
+        <a href="./">&#8592; Project page</a>
+        <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/METADATA_CONTROLLABILITY.md">View this page on GitHub</a>
+      </div>
+    </article>
+    <aside class="toc">
+      <p class="t">On this page</p>
+      <a href="#controllability-is-a-competition-for-residual-variance">Controllability is a competition for residual variance</a>
+      <a href="#the-dataset-decides-what-is-possible">The dataset decides what is possible</a>
+      <a href="#designing-the-training-caption-regime">Designing the training caption regime</a>
+      <a href="#designing-the-inference-prompt">Designing the inference prompt</a>
+      <a href="#adding-a-new-metadata-field-choose-orthogonal-features">Adding a new metadata field: choose orthogonal features</a>
+      <a href="#diagnosing-weak-controllability">Diagnosing weak controllability</a>
+    </aside>
+  </div>
+</div>
+
+<footer><div class="wrap">
+  <p>Built on <a href="https://github.com/NVlabs/Sana">Sana</a>,
+    <a href="https://github.com/mit-han-lab/efficientvit">DC-AE</a> and
+    <a href="https://huggingface.co/google/gemma-2-2b-it">Gemma-2</a>.
+    Location encoding follows <a href="https://github.com/microsoft/satclip">SatCLIP</a>.</p>
+  <p>Sustainability Lab &#183; IIT Gandhinagar</p>
+</div></footer>
+
+</body>
+</html>

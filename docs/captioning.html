@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Captioning a Dataset — FlowSat</title>
+<meta name="description" content="Generating captions for a satellite corpus with a VLM, and how the captioning prompt decides what the model can control.">
+<meta property="og:title" content="Captioning a Dataset — FlowSat">
+<meta property="og:description" content="Generating captions for a satellite corpus with a VLM, and how the captioning prompt decides what the model can control.">
+<meta property="og:url" content="https://dsp81.github.io/flowsat-satellite-image/captioning.html">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="static/doc.css">
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="./">FlowSat</a>
+  <span class="links" style="display:flex;gap:22px">
+    <a href="./#explore">Explore</a><a href="./#method">Method</a>
+    <a href="./#results">Results</a><a href="./#start">Get started</a>
+  </span>
+  <a href="https://github.com/dsp81/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+</div></nav>
+
+<header class="doc"><div class="wrap">
+  <p class="kicker">Guide</p>
+  <h1>Captioning a Dataset</h1>
+  <p class="sub">Generating captions for a satellite corpus with a VLM, and how the captioning prompt decides what the model can control.</p>
+</div></header>
+
+<div class="wrap">
+  <div class="layout">
+    <article>
+      <p>FlowSat trains on <strong>(image, caption, metadata)</strong> triples. If your imagery has no
+      captions, generate them with a vision–language model. <code>tools/caption_dataset.py</code>
+      does this at corpus scale: it walks your directory tree, captions every image,
+      and writes a parallel tree of <code>.txt</code> files that the dataset loader picks up
+      automatically.</p>
+      <p>Captions matter more than people expect. Their <em>style</em> determines how the model
+      behaves at inference, and their <em>content</em> determines how much control your
+      metadata retains. Both are discussed below.</p>
+      <hr />
+      <h2 id="1-quick-start">1. Quick start</h2>
+      <pre><code class="language-bash">python tools/caption_dataset.py \
+          --image_root  /path/to/images \
+          --output_dir  /path/to/captions \
+          --model gemma4-e4b \
+          --batch_size 4 --max_new_tokens 400
+      </code></pre>
+      <p>Output mirrors the input tree, so the loader can map an image to its caption by
+      path:</p>
+      <pre><code>images/airport/airport_0/airport_0_0_rgb.tif
+      captions/airport/airport_0/airport_0_0_rgb.txt        ← the caption
+      captions/airport/airport_0/airport_0_0_rgb.meta.json  ← model, prompt, timing
+      </code></pre>
+      <p><strong>Resume is automatic.</strong> Re-running the same command skips every image that
+      already has a non-empty caption; every write is atomic (temp file + rename), so
+      interrupting with Ctrl-C can never leave a partial caption behind.</p>
+      <h3>Multiple GPUs</h3>
+      <p>Shard by index. Each process handles <code>i % num_shards == shard_id</code>, so shards
+      never touch the same file and can run concurrently, resume independently, and
+      together cover the corpus exactly once.</p>
+      <pre><code class="language-bash">CUDA_VISIBLE_DEVICES=0 python tools/caption_dataset.py ... --shard_id 0 --num_shards 2 &amp;
+      CUDA_VISIBLE_DEVICES=1 python tools/caption_dataset.py ... --shard_id 1 --num_shards 2 &amp;
+      </code></pre>
+      <p><code>--shard_id</code> indexes the <em>work partition</em>, not the GPU. With two shards the ids
+      are always <code>0</code> and <code>1</code>, whichever GPUs you place them on.</p>
+      <h3>Verify coverage when it finishes</h3>
+      <p>Do not trust the "DONE" line — count:</p>
+      <pre><code class="language-bash">find $IMAGES  -name '*.tif' | wc -l          # source images
+      find $CAPTIONS -name '*.txt' | wc -l         # captions written
+      cat $CAPTIONS/FAILED.shard*.txt | wc -l      # failures
+      </code></pre>
+      <p>Captions + failures should equal the image count. If they do not, re-run the
+      same command; resume retries only what is missing.</p>
+      <hr />
+      <h2 id="2-using-a-different-vlm">2. Using a different VLM</h2>
+      <p><code>--model</code> accepts a Gemma alias or any HuggingFace image-text-to-text model id:</p>
+      <pre><code class="language-bash">--model gemma4-e4b                       # default
+      --model gemma4-e2b                       # smaller, faster
+      --model Qwen/Qwen2.5-VL-7B-Instruct      # any HF image-text-to-text model
+      </code></pre>
+      <p>To add a backend, implement one method:</p>
+      <pre><code class="language-python">class MyCaptioner(BaseCaptioner):
+          def caption_batch(self, images, prompts, max_new_tokens) -&gt; list[str]:
+              &quot;&quot;&quot;images: list[PIL.Image], prompts: list[str] -&gt; list[str], same order.&quot;&quot;&quot;
+              ...
+      </code></pre>
+      <p>and register it in <code>build_captioner()</code>. Everything else — sharding, resume,
+      atomic writes, OOM retry — is backend-agnostic.</p>
+      <p>Practical notes: gated models (Gemma among them) need <code>huggingface-cli login</code>
+      and license acceptance; the script falls back through
+      <code>Gemma4ForConditionalGeneration</code> → <code>AutoModelForImageTextToText</code> →
+      <code>AutoModelForCausalLM</code>, so a missing class is not fatal; and recent VLM image
+      processors import <code>torchvision</code>, which must match your torch build exactly
+      (<code>torch 2.4.1</code> pairs with <code>torchvision 0.19.1</code>).</p>
+      <hr />
+      <h2 id="3-the-prompt-determines-what-your-model-can-control">3. The prompt determines what your model can control</h2>
+      <p>The captioning prompt is not a formatting detail. It decides which visual
+      properties end up described in text, and <strong>anything text describes is something
+      metadata no longer needs to explain.</strong></p>
+      <p>If captions state the climate, season and region, then latitude and month are
+      redundant during training. The model learns to read that information from the
+      text pathway — which is pretrained, high-dimensional and cross-attended at every
+      block — and the metadata pathway is starved of gradient. At inference, varying
+      lat/lon then appears to do very little. That is the model behaving correctly
+      given what it was taught, not a bug.</p>
+      <p>See <a href="controllability.html">What Makes a Model Metadata-Controllable</a>
+      for the full discussion of this trade-off.</p>
+      <p>So decide deliberately:</p>
+      <table>
+      <thead>
+      <tr>
+      <th>goal</th>
+      <th>caption should</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>maximum image quality and text fidelity</td>
+      <td>describe everything, context included</td>
+      </tr>
+      <tr>
+      <td>maximum <strong>metadata</strong> controllability</td>
+      <td>describe <em>content</em> (structures, materials, layout, colours) and stay silent on <em>context</em> (country, season, month, climate)</td>
+      </tr>
+      </tbody>
+      </table>
+      <p>The default prompt in the script takes the first path — dense description
+      including climate cues. If metadata control is your priority, remove the climate
+      and season clauses from <code>CAPTION_INSTRUCTION</code> and do not pass country or date in
+      the context block.</p>
+      <h3>Two rules worth keeping whatever you choose</h3>
+      <p><strong>Disentangle appearance from cause.</strong> Satellite imagery is full of correlated
+      confounds. If captions never distinguish "white cloud" from "brown haze" from
+      "low contrast", the model collapses them into one concept and a request for
+      cloud cover produces a muddy image rather than clouds. Name them separately:</p>
+      <pre><code>- If white or bright grey cloud formations are visible, describe them
+        explicitly as clouds and say where (&quot;scattered white clouds across the
+        upper right&quot;). Clouds are bright, opaque, soft-edged objects.
+      - If the ground looks brown, tan, dusty or low-contrast but is NOT covered
+        by white cloud, describe it as the terrain or atmosphere it is (&quot;dry brown
+        farmland&quot;, &quot;muddy brown water&quot;, &quot;a faint brown haze&quot;) and do NOT call it
+        cloudy.
+      </code></pre>
+      <p><strong>Keep the structure consistent.</strong> Same attribute order in every caption
+      (palette → terrain → structures → layout → notable objects). Consistent captions
+      train better than free-form ones because the model learns stable slots.</p>
+      <hr />
+      <h2 id="4-length-match-it-to-your-token-budget">4. Length: match it to your token budget</h2>
+      <p>Caption length must fit <code>--t5_max_length</code> at training time, or the tail is
+      silently discarded. A 200-word caption is roughly 260 tokens; at the default
+      limit of 120, more than half of it never reaches the model — and it is the
+      <em>second</em> half, where spatial composition and object detail usually live.</p>
+      <p>Before training, print the token-length histogram:</p>
+      <pre><code class="language-python">lens = [len(tok(open(p).read()).input_ids) for p in captions[:1000]]
+      print(f&quot;median {sorted(lens)[500]}, p90 {sorted(lens)[900]}, max {max(lens)}&quot;)
+      </code></pre>
+      <p>Set <code>--t5_max_length</code> above the 90th percentile, or shorten the captioning
+      prompt. Also give the VLM enough generation budget: <code>--max_new_tokens 400</code> for a
+      120–200 word target, since a truncated caption ends mid-sentence and reads as
+      broken text.</p>
+      <hr />
+      <h2 id="5-mixing-caption-styles-during-training">5. Mixing caption styles during training</h2>
+      <p>Training on rich captions alone makes short prompts behave badly at inference,
+      because they sample an under-represented mode. FlowSat therefore trains on a
+      mixture, controlled by <code>--rich_frac</code> and <code>--short_frac</code>:</p>
+      <table>
+      <thead>
+      <tr>
+      <th>bucket</th>
+      <th>share</th>
+      <th>purpose</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>rich VLM caption</td>
+      <td>40%</td>
+      <td>image quality, text fidelity</td>
+      </tr>
+      <tr>
+      <td>short template caption</td>
+      <td>30%</td>
+      <td>keeps brief prompts in distribution</td>
+      </tr>
+      <tr>
+      <td>empty caption</td>
+      <td>30%</td>
+      <td>forces the metadata pathway to carry information alone</td>
+      </tr>
+      </tbody>
+      </table>
+      <p>The empty bucket is the one people omit and then wonder why metadata does
+      nothing. With no caption-free samples, text explains nearly all the variance and
+      metadata never has to. Thirty percent is a reasonable default; below about ten
+      percent, metadata conditioning tends to stay weak.</p>
+      <hr />
+      <h2 id="6-sanity-check-the-captions-before-training">6. Sanity-check the captions before training</h2>
+      <p>Read ten of them. Specifically check that:</p>
+      <ul>
+      <li>the caption describes <em>this</em> image, not a generic satellite scene;</li>
+      <li>cloudy images say "white cloud" and hazy ones do not;</li>
+      <li>length matches your token budget;</li>
+      <li>captions end with a complete sentence (otherwise raise <code>--max_new_tokens</code>);</li>
+      <li>the style matches how you intend to prompt at inference.</li>
+      </ul>
+      <p>Ten minutes here is cheaper than discovering a systematic caption flaw after a
+      multi-day training run.</p>
+      <div class="backrow">
+        <a href="./">&#8592; Project page</a>
+        <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/CAPTIONING.md">View this page on GitHub</a>
+      </div>
+    </article>
+    <aside class="toc">
+      <p class="t">On this page</p>
+      <a href="#1-quick-start">1. Quick start</a>
+      <a href="#2-using-a-different-vlm">2. Using a different VLM</a>
+      <a href="#3-the-prompt-determines-what-your-model-can-control">3. The prompt determines what your model can control</a>
+      <a href="#4-length-match-it-to-your-token-budget">4. Length: match it to your token budget</a>
+      <a href="#5-mixing-caption-styles-during-training">5. Mixing caption styles during training</a>
+      <a href="#6-sanity-check-the-captions-before-training">6. Sanity-check the captions before training</a>
+    </aside>
+  </div>
+</div>
+
+<footer><div class="wrap">
+  <p>Built on <a href="https://github.com/NVlabs/Sana">Sana</a>,
+    <a href="https://github.com/mit-han-lab/efficientvit">DC-AE</a> and
+    <a href="https://huggingface.co/google/gemma-2-2b-it">Gemma-2</a>.
+    Location encoding follows <a href="https://github.com/microsoft/satclip">SatCLIP</a>.</p>
+  <p>Sustainability Lab &#183; IIT Gandhinagar</p>
+</div></footer>
+
+</body>
+</html>

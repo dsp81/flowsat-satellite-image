@@ -121,6 +121,7 @@ footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
   <span class="brand">FlowSat</span>
   <span class="links" style="display:flex;gap:22px">
     <a href="#explore">Explore</a><a href="#method">Method</a>
+    <a href="#control">Controllability</a>
     <a href="#results">Results</a><a href="#start">Get started</a>
     <a href="#cite">Cite</a>
   </span>
@@ -267,6 +268,74 @@ footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
   </div>
 </section>
 
+<section id="control" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Design notes</p>
+    <h2>What makes a model metadata-controllable</h2>
+    <p class="lead">Metadata conditioning either works or quietly does nothing,
+      and the difference is rarely the architecture.</p>
+
+    <p>A generative model has to explain the variation in its training images,
+      and every conditioning signal competes to do that explaining. Text is
+      cheap: it arrives through a large pretrained encoder, cross-attended at
+      every block. Metadata is expensive: a small learned embedding through a
+      narrow injection path. So when a caption already states what a metadata
+      field encodes, that field is redundant during training &mdash; gradient
+      descent routes around it, the pathway starves, and at inference the field
+      looks inert. The model is behaving correctly; there was nothing left for
+      it to explain.</p>
+
+    <p><strong>Controllability is inversely proportional to how much your
+      captions cover that field's own domain.</strong> The mechanism is
+      <em>overlap</em>, not richness: a 300-word caption about rooftop geometry
+      and pavement texture leaves latitude's variance untouched, while a
+      30-word "an arid Egyptian site in winter" destroys it.</p>
+
+    <h3>The caption mixture we train on</h3>
+    <table>
+      <thead><tr><th>Bucket</th><th class="n">Share</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Rich VLM caption</td><td class="n">40%</td>
+          <td>Image quality and text fidelity</td></tr>
+        <tr><td>Short template caption</td><td class="n">30%</td>
+          <td>Keeps brief prompts in distribution</td></tr>
+        <tr class="ours"><td>Empty caption</td><td class="n">30%</td>
+          <td>The only regime where metadata must carry the load alone</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:15px;color:var(--mut)">The empty bucket is the one
+      people omit. Our earlier 70:20:10 split left only 10% caption-free samples
+      and produced visibly weaker metadata response than 40:30:30.</p>
+
+    <h3>Why GSD is the most controllable field</h3>
+    <p>Ground sample distance needed no special encoder design, no tuning and no
+      extra loss term. It works because it is nearly orthogonal to everything
+      else in the conditioning: no VLM ever writes "0.5 m per pixel", resolution
+      is uncorrelated with latitude, month or cloud, and its visual effect is
+      monotonic. Nothing else could account for that variation, so the model was
+      forced to use the channel. Latitude, month and cloud cover all struggle for
+      the opposite reason &mdash; captions describe country, season, haze and
+      contrast constantly.</p>
+
+    <div class="grid">
+      <div class="card"><h4>Do my captions describe it?</h4>
+        <p>If yes, either take it out of the captions or accept that the field
+          will be weak.</p></div>
+      <div class="card"><h4>Is it predictable from another field?</h4>
+        <p>The model will use the cheaper one, and the new field adds parameters
+          without adding control.</p></div>
+      <div class="card"><h4>Does it have its own visual signature?</h4>
+        <p>If the effect depends on another field &mdash; month depends on
+          hemisphere &mdash; condition on the derived quantity instead.</p></div>
+    </div>
+
+    <div class="note"><strong>&rarr;</strong>
+      <a href="controllability.html">Read the full guide</a> &mdash; dataset
+      limits, dropout to a learned null embedding, inference prompt design, and
+      an ordered checklist for diagnosing weak controllability.</div>
+  </div>
+</section>
+
 <section id="start" class="reveal">
   <div class="wrap">
     <p class="kicker">Get started</p>
@@ -292,11 +361,11 @@ python generate.py --prompt "An airport with a long grey runway."</code></pre>
     "metadata":     (7,)        # lon, lat, gsd, cloud, year, month, day
 }</code></pre>
     <div class="note"><strong>&rarr;</strong>
-      <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/NEW_DATASET.md">Using FlowSat on a new dataset</a>
+      <a href="new-dataset.html">Using FlowSat on a new dataset</a>
       &nbsp;&#183;&nbsp;
-      <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/CAPTIONING.md">Captioning a dataset</a>
+      <a href="captioning.html">Captioning a dataset</a>
       &nbsp;&#183;&nbsp;
-      <a href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/METADATA_CONTROLLABILITY.md">What makes a model metadata-controllable</a>
+      <a href="controllability.html">What makes a model metadata-controllable</a>
     </div>
   </div>
 </section>
