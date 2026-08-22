@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <!-- Tiling map graticule. Deliberately faint: this sits behind body text. -->
+  <g fill="none" stroke="#0f1216" stroke-opacity="0.030" stroke-width="1">
+    <path d="M100 0V600M200 0V600M300 0V600M400 0V600M500 0V600"/>
+    <path d="M0 100H600M0 200H600M0 300H600M0 400H600M0 500H600"/>
+  </g>
+  <g fill="none" stroke="#0b6b57" stroke-opacity="0.055" stroke-width="1.2">
+    <path d="M0 0V600M600 0V600M0 0H600M0 600H600"/>
+  </g>
+  <g fill="#0b6b57" fill-opacity="0.10">
+    <circle cx="0" cy="0" r="1.6"/><circle cx="600" cy="0" r="1.6"/>
+    <circle cx="0" cy="600" r="1.6"/><circle cx="600" cy="600" r="1.6"/>
+    <circle cx="300" cy="300" r="1.3"/>
+  </g>
+</svg>

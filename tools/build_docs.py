@@ -71,6 +71,12 @@ SHELL = """<!DOCTYPE html>
 </head>
 <body>
 <div id="prog"></div>
+<div id="bg" aria-hidden="true">
+  <div class="mesh"></div>
+  <div class="graticule"></div>
+  <div class="scan"></div>
+  <div class="grain"></div>
+</div>
 
 <nav><div class="wrap">
   <a class="brand" href="./">FlowSat</a>

@@ -203,10 +203,77 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
   .js .stag>*,.js .gal .cell{opacity:1;transform:none;transition:none}
   .cmp.demo .bar,.cmp.demo .top{transition:none}
 }
+/* ---------- background: graticule, drift, satellite pass, grain ----------- */
+body{background:transparent}
+#bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
+  background:linear-gradient(180deg,#fdfefe 0%,#fff 32%,#fbfcfd 78%,#f7f9fb 100%)}
+#bg>div{position:absolute}
+#bg .mesh{inset:-30%;
+  background:
+    radial-gradient(34% 30% at 18% 14%,rgba(11,107,87,.11),transparent 62%),
+    radial-gradient(30% 26% at 84% 26%,rgba(20,96,140,.075),transparent 62%),
+    radial-gradient(36% 32% at 62% 82%,rgba(11,107,87,.07),transparent 62%),
+    radial-gradient(26% 24% at 12% 74%,rgba(20,96,140,.05),transparent 62%);
+  animation:meshdrift 46s ease-in-out infinite alternate}
+#bg .graticule{inset:-6%;background:url("static/grid.svg") repeat;
+  background-size:520px 520px;animation:gridpan 120s linear infinite;
+  -webkit-mask-image:radial-gradient(78% 66% at 50% 30%,#000 30%,transparent 82%);
+  mask-image:radial-gradient(78% 66% at 50% 30%,#000 30%,transparent 82%)}
+#bg .scan{top:-40%;left:-45%;width:55%;height:190%;transform:rotate(11deg);
+  background:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.05) 42%,
+    rgba(255,255,255,.55) 50%,rgba(20,96,140,.045) 58%,transparent 100%);
+  animation:pass 34s linear infinite}
+#bg .grain{inset:0;background:url("static/noise.svg") repeat;background-size:180px 180px;
+  opacity:.028;mix-blend-mode:multiply}
+@keyframes meshdrift{
+  0%{transform:translate3d(-2%,-1%,0) scale(1)}
+  50%{transform:translate3d(1.5%,1.5%,0) scale(1.06)}
+  100%{transform:translate3d(2%,-1.5%,0) scale(1.02)}}
+@keyframes gridpan{from{background-position:0 0}to{background-position:520px 520px}}
+@keyframes pass{0%{left:-45%;opacity:0}8%{opacity:1}
+                92%{opacity:1}100%{left:125%;opacity:0}}
+
+.globe{position:absolute;top:-70px;right:-90px;width:520px;height:520px;
+  opacity:.13;pointer-events:none;z-index:-1}
+.globe .m{animation:meridian 26s linear infinite}
+@keyframes meridian{0%{rx:150px}25%{rx:0px}50%{rx:150px}75%{rx:0px}100%{rx:150px}}
+@media(max-width:900px){.globe{display:none}}
+
+/* panels float over the background instead of covering it */
+section,header{background:transparent}
+.ctrl{background:rgba(247,249,251,.78);backdrop-filter:blur(8px)}
+.card{background:linear-gradient(180deg,rgba(255,255,255,.94),rgba(247,249,251,.82));
+  backdrop-filter:blur(6px)}
+.note{background:rgba(230,242,239,.86);backdrop-filter:blur(6px)}
+.stage,.frame,.cmp{background:rgba(247,249,251,.7)}
+
+/* ---------- player controls ------------------------------------------- */
+.play,.replay{position:absolute;z-index:3;display:flex;align-items:center;
+  justify-content:center;border-radius:50%;cursor:pointer;
+  background:rgba(255,255,255,.86);color:var(--ink);border:1px solid rgba(15,18,22,.10);
+  box-shadow:0 3px 14px -4px rgba(15,18,22,.4);backdrop-filter:blur(8px);
+  transition:transform .16s ease,background .16s ease,opacity .2s ease}
+.play{left:12px;bottom:12px;width:40px;height:40px;font-size:13px;padding-left:2px}
+.replay{right:12px;top:12px;width:34px;height:34px;font-size:15px}
+.play:hover,.replay:hover{transform:scale(1.08);background:#fff}
+.play:active,.replay:active{transform:scale(.96)}
+.play.on{background:var(--ink);color:#fff;border-color:var(--ink);padding-left:0}
+.cmp .replay{opacity:0}
+.cmp:hover .replay,.replay:focus-visible{opacity:1}
+
+@media(prefers-reduced-motion:reduce){
+  #bg .mesh,#bg .graticule,#bg .scan,.globe .m{animation:none}
+}
 </style>
 </head>
 <body>
 <div id="prog"></div>
+<div id="bg" aria-hidden="true">
+  <div class="mesh"></div>
+  <div class="graticule"></div>
+  <div class="scan"></div>
+  <div class="grain"></div>
+</div>
 
 <nav><div class="wrap">
   <span class="brand">FlowSat</span>
@@ -220,6 +287,24 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
 </div></nav>
 
 <header>
+<svg class="globe" viewBox="0 0 400 400" aria-hidden="true">
+  <g fill="none" stroke="#0b6b57" stroke-width="1.1">
+    <circle cx="200" cy="200" r="150"/>
+    <ellipse cx="200" cy="76.5" rx="75.0" ry="23.2"/>
+    <ellipse cx="200" cy="128.7" rx="129.9" ry="40.1"/>
+    <ellipse cx="200" cy="200.0" rx="150.0" ry="46.4"/>
+    <ellipse cx="200" cy="271.3" rx="129.9" ry="40.1"/>
+    <ellipse cx="200" cy="323.5" rx="75.0" ry="23.2"/>
+    <ellipse class="m" style="animation-delay:-0s" cx="200" cy="200" rx="150" ry="150"/>
+    <ellipse class="m" style="animation-delay:-3s" cx="200" cy="200" rx="139" ry="150"/>
+    <ellipse class="m" style="animation-delay:-6s" cx="200" cy="200" rx="106" ry="150"/>
+    <ellipse class="m" style="animation-delay:-9s" cx="200" cy="200" rx="57" ry="150"/>
+    <ellipse class="m" style="animation-delay:-12s" cx="200" cy="200" rx="150" ry="150"/>
+    <ellipse class="m" style="animation-delay:-15s" cx="200" cy="200" rx="139" ry="150"/>
+    <ellipse class="m" style="animation-delay:-18s" cx="200" cy="200" rx="106" ry="150"/>
+    <ellipse class="m" style="animation-delay:-21s" cx="200" cy="200" rx="57" ry="150"/>
+  </g>
+</svg>
   <div class="wrap">
     <span class="venue">BMVC 2026</span>
     <h1>FlowSat</h1>
@@ -258,6 +343,8 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
 
     <div class="dial">
       <div class="stage" id="stage">
+        <button class="play" id="play" type="button"
+                aria-label="Play the sweep">&#9654;</button>
         <div class="ph" id="stage-ph">generate sweeps into <code>static/sweeps/</code></div>
       </div>
 
@@ -291,6 +378,8 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
         static/compare/a.jpg &nbsp;+&nbsp; static/compare/b.jpg
       </div>
       <div class="bar" id="cmp-bar"><div class="knob">&#8646;</div></div>
+      <button class="replay" id="replay" type="button"
+              aria-label="Replay the comparison">&#10227;</button>
       <span class="tag l">January</span>
       <span class="tag r">July</span>
     </div>
@@ -701,50 +790,76 @@ if(table && !CALM){
   countIO.observe(table);
 }
 
-/* the dial plays itself once, then hands over */
+/* the dial plays itself once on arrival; the button drives it after that */
 (function(){
   const explore=document.getElementById('explore');
   const slider=document.getElementById('slider');
-  if(!explore||!slider) return;
-  let timer=null, done=false;
-  const stop=()=>{ if(timer){clearInterval(timer);timer=null;} done=true; };
-  ['pointerdown','keydown','input','wheel'].forEach(ev=>{
-    explore.addEventListener(ev,stop,{passive:true});
-  });
-  addEventListener('keydown',e=>{ if(e.key.startsWith('Arrow')) stop(); },{passive:true});
+  const btn=document.getElementById('play');
   const val=document.getElementById('axis-val');
-  const playIO=new IntersectionObserver(es=>es.forEach(e=>{
-    if(!e.isIntersecting||done||CALM) return;
-    playIO.disconnect();
-    const max=+slider.max; let i=+slider.value, n=0;
-    timer=setInterval(()=>{
-      if(done) return stop();
-      i=(i+1)%(max+1);
-      slider.value=i;
-      slider.dispatchEvent(new Event('input'));
-      if(val){ val.classList.add('flip'); setTimeout(()=>val.classList.remove('flip'),150); }
-      if(++n>max) stop();
+  if(!explore||!slider||!btn) return;
+  const PLAY='▶', PAUSE='‖';
+  let timer=null, selfDrive=false, touched=false;
+  const render=()=>{
+    btn.textContent = timer?PAUSE:PLAY;
+    btn.classList.toggle('on',!!timer);
+    btn.setAttribute('aria-label', timer?'Pause the sweep':'Play the sweep');
+  };
+  const stop=()=>{ if(timer){clearInterval(timer);timer=null;} render(); };
+  const tick=()=>{
+    slider.value=(+slider.value+1)%(+slider.max+1);
+    selfDrive=true; slider.dispatchEvent(new Event('input')); selfDrive=false;
+    if(val){ val.classList.add('flip'); setTimeout(()=>val.classList.remove('flip'),150); }
+  };
+  const play=()=>{ if(!timer){ timer=setInterval(tick,820); render(); } };
+  btn.addEventListener('click',e=>{ e.stopPropagation(); touched=true; timer?stop():play(); });
+  ['pointerdown','wheel'].forEach(ev=>explore.addEventListener(ev,e=>{
+    if(e.target===btn) return;
+    touched=true; stop();
+  },{passive:true}));
+  slider.addEventListener('input',()=>{ if(!selfDrive){ touched=true; stop(); } });
+  addEventListener('keydown',e=>{
+    if(e.key.indexOf('Arrow')===0){ touched=true; stop(); }
+  },{passive:true});
+
+  /* one unattended pass when the section first scrolls into view */
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(!e.isIntersecting||touched||CALM) return;
+    io.disconnect();
+    let n=0; play();
+    const watch=setInterval(()=>{
+      if(!timer){ clearInterval(watch); return; }
+      if(++n>+slider.max){ clearInterval(watch); stop(); }
     },820);
   }),{threshold:.45});
-  playIO.observe(explore);
+  io.observe(explore);
+  render();
 })();
 
-/* the comparison slider shows what it does before you touch it */
+/* the comparison slider demonstrates itself, and can be asked to do it again */
 (function(){
   const box=document.getElementById('cmp'), bar=document.getElementById('cmp-bar'),
-        top=document.getElementById('cmp-a');
+        top=document.getElementById('cmp-a'), btn=document.getElementById('replay');
   if(!box||!bar||!top) return;
-  let used=false;
-  ['pointerdown','touchstart'].forEach(ev=>
-    box.addEventListener(ev,()=>{ used=true; box.classList.remove('demo'); },{passive:true}));
+  let used=false, running=false;
   const at=p=>{ bar.style.left=p+'%'; top.style.clipPath=`inset(0 ${100-p}% 0 0)`; };
+  const run=()=>{
+    if(running) return;
+    running=true; box.classList.add('demo');
+    const frames=[74,26,50];
+    frames.forEach((p,i)=>setTimeout(()=>{ if(running) at(p); },420+i*1150));
+    setTimeout(()=>{ box.classList.remove('demo'); running=false; },420+frames.length*1150);
+  };
+  ['pointerdown','touchstart'].forEach(ev=>box.addEventListener(ev,()=>{
+    used=true; running=false; box.classList.remove('demo');
+  },{passive:true}));
+  if(btn){
+    ['pointerdown','mousedown','touchstart'].forEach(ev=>
+      btn.addEventListener(ev,e=>e.stopPropagation()));
+    btn.addEventListener('click',e=>{ e.stopPropagation(); e.preventDefault(); run(); });
+  }
   const demoIO=new IntersectionObserver(es=>es.forEach(e=>{
     if(!e.isIntersecting||used||CALM) return;
-    demoIO.disconnect();
-    box.classList.add('demo');
-    const frames=[74,26,50];
-    frames.forEach((p,i)=>setTimeout(()=>{ if(!used) at(p); },420+i*1150));
-    setTimeout(()=>box.classList.remove('demo'),420+frames.length*1150);
+    demoIO.disconnect(); run();
   }),{threshold:.4});
   demoIO.observe(box);
 })();

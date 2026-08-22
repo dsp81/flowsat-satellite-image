@@ -131,3 +131,40 @@ pre:hover .copy,.copy:focus-visible{opacity:1}
   .js article>*{opacity:1;transform:none;transition:none}
   #prog{transition:none}
 }
+
+/* ---------- background: graticule, drift, satellite pass, grain ----------- */
+body{background:transparent}
+#bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
+  background:linear-gradient(180deg,#fdfefe 0%,#fff 34%,#fbfcfd 80%,#f7f9fb 100%)}
+#bg>div{position:absolute}
+#bg .mesh{inset:-30%;
+  background:
+    radial-gradient(32% 28% at 16% 10%,rgba(11,107,87,.10),transparent 62%),
+    radial-gradient(28% 24% at 86% 20%,rgba(20,96,140,.065),transparent 62%),
+    radial-gradient(34% 30% at 60% 86%,rgba(11,107,87,.055),transparent 62%);
+  animation:meshdrift 46s ease-in-out infinite alternate}
+#bg .graticule{inset:-6%;background:url("static/grid.svg") repeat;
+  background-size:520px 520px;animation:gridpan 120s linear infinite;
+  -webkit-mask-image:radial-gradient(76% 62% at 50% 26%,#000 30%,transparent 82%);
+  mask-image:radial-gradient(76% 62% at 50% 26%,#000 30%,transparent 82%)}
+#bg .scan{top:-40%;left:-45%;width:55%;height:190%;transform:rotate(11deg);
+  background:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.04) 42%,
+    rgba(255,255,255,.5) 50%,rgba(20,96,140,.035) 58%,transparent 100%);
+  animation:pass 40s linear infinite}
+#bg .grain{inset:0;background:url("static/noise.svg") repeat;background-size:180px 180px;
+  opacity:.026;mix-blend-mode:multiply}
+@keyframes meshdrift{
+  0%{transform:translate3d(-2%,-1%,0) scale(1)}
+  50%{transform:translate3d(1.5%,1.5%,0) scale(1.06)}
+  100%{transform:translate3d(2%,-1.5%,0) scale(1.02)}}
+@keyframes gridpan{from{background-position:0 0}to{background-position:520px 520px}}
+@keyframes pass{0%{left:-45%;opacity:0}8%{opacity:1}
+                92%{opacity:1}100%{left:125%;opacity:0}}
+
+header.doc,article,.toc{background:transparent}
+article blockquote{background:rgba(230,242,239,.86);backdrop-filter:blur(6px)}
+article table{background:rgba(255,255,255,.55);border-radius:10px}
+
+@media(prefers-reduced-motion:reduce){
+  #bg .mesh,#bg .graticule,#bg .scan{animation:none}
+}
