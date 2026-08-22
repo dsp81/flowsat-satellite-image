@@ -12,8 +12,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/doc.css">
+<script>document.documentElement.className+=" js"</script>
 </head>
 <body>
+<div id="prog"></div>
 
 <nav><div class="wrap">
   <a class="brand" href="./">FlowSat</a>
@@ -233,6 +235,60 @@
     Location encoding follows <a href="https://github.com/microsoft/satclip">SatCLIP</a>.</p>
   <p>Sustainability Lab &#183; IIT Gandhinagar</p>
 </div></footer>
+
+
+<script>
+/* Presentation only: reading progress, section spy, heading anchors, code copy.
+   Adds no content, and stands down under prefers-reduced-motion. */
+(function(){
+const CALM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const prog=document.getElementById('prog');
+const onScroll=()=>{
+  const h=document.documentElement;
+  prog.style.width=((h.scrollTop/Math.max(1,h.scrollHeight-h.clientHeight))*100).toFixed(2)+'%';
+};
+addEventListener('scroll',onScroll,{passive:true}); onScroll();
+
+/* clickable heading anchors */
+document.querySelectorAll('article h2[id]').forEach(h=>{
+  const a=document.createElement('a');
+  a.className='anchor'; a.href='#'+h.id; a.textContent='#';
+  a.setAttribute('aria-hidden','true'); a.tabIndex=-1;
+  h.appendChild(a);
+});
+
+/* sidebar follows the reader */
+const links=[...document.querySelectorAll('.toc a')];
+const spy=new IntersectionObserver(es=>es.forEach(e=>{
+  if(!e.isIntersecting) return;
+  links.forEach(a=>a.classList.toggle('act',a.getAttribute('href')==='#'+e.target.id));
+}),{rootMargin:'-12% 0px -72% 0px'});
+document.querySelectorAll('article h2[id]').forEach(h=>spy.observe(h));
+
+/* copy button on every code block */
+document.querySelectorAll('article pre').forEach(pre=>{
+  const b=document.createElement('button');
+  b.className='copy'; b.type='button'; b.textContent='copy';
+  b.onclick=()=>{
+    navigator.clipboard.writeText(pre.querySelector('code').innerText);
+    b.textContent='copied'; setTimeout(()=>b.textContent='copy',1400);
+  };
+  pre.appendChild(b);
+});
+
+/* prose settles in as you reach it */
+const art=document.querySelector('article');
+if(CALM){ art.classList.add('lit'); }
+else{
+  const io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+  }),{threshold:.05,rootMargin:'0px 0px -6% 0px'});
+  [...art.children].forEach(el=>io.observe(el));
+}
+})();
+</script>
+
 
 </body>
 </html>

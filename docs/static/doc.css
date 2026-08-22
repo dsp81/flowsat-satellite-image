@@ -74,3 +74,60 @@ p code,li code,td code,h2 code,h3 code{background:var(--soft);padding:2px 6px;
   display:flex;gap:18px;flex-wrap:wrap;font-size:15px}
 footer{padding:34px 0 56px;text-align:center;color:var(--mut);font-size:14.5px}
 footer p{margin:0 0 6px}
+
+/* ---------- polish: depth, motion, focus ---------------------------------- */
+#prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
+  background:linear-gradient(90deg,var(--acc),#12a37f);transition:width .08s linear}
+
+a:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;
+  border-radius:4px}
+article a{text-underline-offset:2px;text-decoration-color:rgba(11,107,87,.35);
+  text-decoration-line:underline;transition:text-decoration-color .18s ease}
+article a:hover{text-decoration-color:var(--acc)}
+
+nav .links a{position:relative}
+nav .links a::after{content:"";position:absolute;left:0;right:0;bottom:-19px;height:2px;
+  background:var(--acc);transform:scaleX(0);transition:transform .22s ease}
+nav .links a:hover::after{transform:scaleX(1)}
+
+header.doc{position:relative;overflow:hidden}
+header.doc::before{content:"";position:absolute;inset:-60% -20% auto -20%;height:200%;
+  background:radial-gradient(40% 44% at 18% 10%,rgba(11,107,87,.09),transparent 62%),
+             radial-gradient(38% 40% at 86% 0%,rgba(11,107,87,.06),transparent 60%);
+  animation:drift 24s ease-in-out infinite alternate;pointer-events:none;z-index:-1}
+@keyframes drift{from{transform:translate3d(-1.5%,0,0) scale(1)}
+                 to{transform:translate3d(1.5%,2%,0) scale(1.05)}}
+
+article h2{scroll-margin-top:86px}
+article h2 .anchor{opacity:0;margin-left:.4em;color:var(--mut);font-weight:400;
+  text-decoration:none;transition:opacity .16s ease}
+article h2:hover .anchor{opacity:.55}
+article h2 .anchor:hover{opacity:1;color:var(--acc);text-decoration:none}
+
+.js article>*{opacity:0;transform:translateY(10px);
+  transition:opacity .5s ease,transform .5s ease}
+.js article>.in,.js article.lit>*{opacity:1;transform:none}
+
+tbody tr{transition:background .18s ease}
+tbody tr:hover{background:var(--soft)}
+
+pre{position:relative}
+.copy{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);
+  color:#cfd6de;border:1px solid rgba(255,255,255,.16);border-radius:6px;
+  padding:4px 10px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;
+  opacity:0;transition:opacity .16s ease,background .16s ease,color .16s ease}
+pre:hover .copy,.copy:focus-visible{opacity:1}
+.copy:hover{background:rgba(255,255,255,.18);color:#fff}
+
+.toc a{transition:color .16s ease,border-left-color .16s ease,
+  background .16s ease,padding-left .16s ease}
+.toc a.act{color:var(--ink);border-left-color:var(--acc);font-weight:500}
+
+.backrow a{color:var(--mut)}
+.backrow a:hover{color:var(--acc)}
+
+@media(prefers-reduced-motion:reduce){
+  header.doc::before{animation:none}
+  .js article>*{opacity:1;transform:none;transition:none}
+  #prog{transition:none}
+}
