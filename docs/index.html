@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FlowSat — Metadata-Conditioned Satellite Image Generation</title>
+<meta name="description" content="FlowSat: a flow-matching Diffusion Transformer that conditions satellite image generation on geometry-aware acquisition metadata. BMVC 2026.">
+<meta property="og:title" content="FlowSat (BMVC 2026)">
+<meta property="og:description" content="Metadata is the dial: control location, resolution, season and cloud cover in generated satellite imagery.">
+<meta property="og:image" content="https://sustainability-lab.github.io/flowsat-satellite-image/static/teaser.jpg">
+<meta property="og:url" content="https://sustainability-lab.github.io/flowsat-satellite-image/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
+  --acc:#0b6b57; --accs:#e6f2ef; --max:1000px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+
+nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
+nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto}
+nav a{color:var(--mut);font-size:14.5px;font-weight:500}
+nav a:hover{color:var(--ink);text-decoration:none}
+@media(max-width:700px){nav .links{display:none}}
+
+header{padding:64px 0 44px;text-align:center;border-bottom:1px solid var(--line)}
+.venue{display:inline-block;font-size:12.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);background:var(--accs);padding:6px 14px;border-radius:999px}
+h1{font-size:clamp(38px,6vw,60px);line-height:1.05;font-weight:700;margin:20px 0 12px;letter-spacing:-.028em}
+.sub{font-size:clamp(17px,2.2vw,21px);color:var(--mut);max-width:740px;margin:0 auto 24px}
+.auth{font-size:17px;margin:0 0 5px}.auth a{color:var(--ink)}
+.aff{font-size:15px;color:var(--mut);margin:0 0 26px}
+.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:9px;font-size:15px;font-weight:500;background:var(--ink);color:#fff;border:1px solid var(--ink);transition:.14s}
+.btn:hover{text-decoration:none;opacity:.88;transform:translateY(-1px)}
+.btn.g{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.g:hover{border-color:var(--mut)}
+
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+h2{font-size:28px;font-weight:650;letter-spacing:-.016em;margin:0 0 10px}
+.kicker{color:var(--acc);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}
+h3{font-size:19px;font-weight:600;margin:28px 0 10px}
+p{margin:0 0 16px} .lead{font-size:19px;color:#28303a}
+
+figure{margin:0} img{max-width:100%;display:block}
+.frame{border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--soft)}
+figcaption{font-size:14.5px;color:var(--mut);margin-top:11px;text-align:center}
+.ph{width:100%;aspect-ratio:16/6;border-radius:12px;border:1px dashed #c8ced6;
+  background:repeating-linear-gradient(45deg,#fafbfc,#fafbfc 12px,#f1f4f7 12px,#f1f4f7 24px);
+  display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13.5px;font-family:"JetBrains Mono",monospace;text-align:center;padding:12px}
+
+.dial{display:grid;grid-template-columns:1.25fr .75fr;gap:28px;align-items:start;margin-top:26px}
+@media(max-width:800px){.dial{grid-template-columns:1fr}}
+.stage{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:var(--soft)}
+.stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .22s ease}
+.stage img.on{opacity:1}
+.stage .ph{position:absolute;inset:0;aspect-ratio:auto;border:none;border-radius:0}
+.ctrl{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:20px}
+.tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.tab{flex:1;min-width:78px;padding:8px 10px;font-size:14px;font-weight:500;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--mut);cursor:pointer;transition:.14s}
+.tab:hover{border-color:var(--mut);color:var(--ink)}
+.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.rowlab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.rowlab .k{font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
+.rowlab .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:5px;border-radius:99px;background:var(--line);outline:none;margin:10px 0 4px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.22)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid #fff}
+.ticks{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);font-family:"JetBrains Mono",monospace}
+.fixed{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:13.5px;color:var(--mut);line-height:1.75}
+.fixed code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px}
+.hint{font-size:13.5px;color:var(--mut);margin-top:14px;font-style:italic}
+
+.cmp{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);aspect-ratio:2/1;cursor:ew-resize;user-select:none;background:var(--soft)}
+.cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cmp .top{clip-path:inset(0 50% 0 0)}
+.cmp .bar{position:absolute;top:0;bottom:0;left:50%;width:2px;background:#fff;box-shadow:0 0 0 1px rgba(0,0,0,.18);pointer-events:none}
+.cmp .knob{position:absolute;top:50%;left:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--ink);pointer-events:none}
+.cmp .tag{position:absolute;bottom:12px;padding:5px 11px;border-radius:7px;background:rgba(10,12,15,.72);color:#fff;font-size:12.5px;font-weight:500;pointer-events:none}
+.cmp .tag.l{left:12px} .cmp .tag.r{right:12px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:18px;margin:26px 0 6px}
+.card{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:20px}
+.card h4{margin:0 0 7px;font-size:16px;font-weight:600}
+.card p{margin:0;font-size:14.5px;color:var(--mut);line-height:1.55}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:22px}
+.gal .cell{aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--soft);cursor:zoom-in}
+.gal img{width:100%;height:100%;object-fit:cover;transition:transform .3s ease}
+.gal .cell:hover img{transform:scale(1.05)}
+#lb{position:fixed;inset:0;background:rgba(8,10,13,.94);display:none;align-items:center;justify-content:center;z-index:100;cursor:zoom-out;padding:32px}
+#lb.on{display:flex} #lb img{max-width:92vw;max-height:88vh;border-radius:10px}
+
+table{width:100%;border-collapse:collapse;font-size:15.5px;margin:10px 0}
+th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line)}
+th{font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}
+tr.ours{background:var(--accs)} tr.ours td{font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+
+pre{background:#0f1216;color:#e9edf2;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.62;margin:0 0 14px;position:relative}
+code{font-family:"JetBrains Mono",monospace;font-size:.9em}
+p code,li code,td code{background:var(--soft);padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
+.copy{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);color:#cfd6de;border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif}
+.copy:hover{background:rgba(255,255,255,.18);color:#fff}
+.note{background:var(--accs);border-left:3px solid var(--acc);padding:15px 18px;border-radius:0 9px 9px 0;margin:20px 0;font-size:15.5px}
+footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
+.reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
+.reveal.in{opacity:1;transform:none}
+@media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <span class="brand">FlowSat</span>
+  <span class="links" style="display:flex;gap:22px">
+    <a href="#explore">Explore</a><a href="#method">Method</a>
+    <a href="#results">Results</a><a href="#start">Get started</a>
+    <a href="#cite">Cite</a>
+  </span>
+  <a href="https://github.com/sustainability-lab/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+</div></nav>
+
+<header>
+  <div class="wrap">
+    <span class="venue">BMVC 2026</span>
+    <h1>FlowSat</h1>
+    <p class="sub">Flow-Matching Diffusion Transformers with Metadata Conditioning
+      for Satellite Image Generation</p>
+    <!-- TODO(camera-ready): confirm author order, add personal links -->
+    <p class="auth">Digvijay Singh Parihar &nbsp;&#183;&nbsp; Rishabh &nbsp;&#183;&nbsp;
+      Nipun Batra &nbsp;&#183;&nbsp; Shanmuganathan Raman</p>
+    <p class="aff">Sustainability Lab, Indian Institute of Technology Gandhinagar</p>
+    <div class="btns">
+      <a class="btn" href="#" id="paper">Paper</a>
+      <a class="btn g" href="https://github.com/sustainability-lab/flowsat-satellite-image">Code</a>
+      <a class="btn g" href="https://github.com/sustainability-lab/flowsat-satellite-image/blob/main/docs/NEW_DATASET.md">Your own data</a>
+      <a class="btn g" href="#cite">BibTeX</a>
+    </div>
+  </div>
+</header>
+
+<section class="reveal">
+  <div class="wrap">
+    <figure>
+      <div class="frame"><img src="static/teaser.jpg" alt="Month sweep" id="teaser"></div>
+      <figcaption><strong>Metadata is the dial.</strong> One caption, one noise seed.
+        Only the acquisition month changes, left to right.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section id="explore" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Interactive</p>
+    <h2>Turn the dial yourself</h2>
+    <p class="lead">Every image below was generated from the <em>same caption</em>
+      and the <em>same noise seed</em>. Only one metadata field changes. Drag a
+      slider to see what that field controls.</p>
+
+    <div class="dial">
+      <div class="stage" id="stage">
+        <div class="ph" id="stage-ph">generate sweeps into <code>static/sweeps/</code></div>
+      </div>
+
+      <div class="ctrl">
+        <div class="tabs" id="tabs">
+          <button class="tab on" data-axis="month">Season</button>
+          <button class="tab" data-axis="gsd">Resolution</button>
+          <button class="tab" data-axis="cloud">Cloud</button>
+        </div>
+        <div class="rowlab"><span class="k" id="axis-name">Month</span>
+          <span class="v" id="axis-val">July</span></div>
+        <input type="range" id="slider" min="0" max="11" value="6" step="1">
+        <div class="ticks" id="ticks"></div>
+        <div class="fixed" id="fixed"></div>
+        <p class="hint" id="hint"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="reveal">
+  <div class="wrap">
+    <p class="kicker">Comparison</p>
+    <h2>Same prompt, different acquisition</h2>
+    <p>Drag the divider. Both sides share a caption and a seed; only the metadata
+      differs.</p>
+    <div class="cmp" id="cmp">
+      <img class="bot" id="cmp-b" src="static/compare/b.jpg" alt="">
+      <img class="top" id="cmp-a" src="static/compare/a.jpg" alt="">
+      <div class="ph" id="cmp-ph" style="position:absolute;inset:0;aspect-ratio:auto;border:none;border-radius:0;display:none">
+        static/compare/a.jpg &nbsp;+&nbsp; static/compare/b.jpg
+      </div>
+      <div class="bar" id="cmp-bar"><div class="knob">&#8646;</div></div>
+      <span class="tag l">January</span>
+      <span class="tag r">July</span>
+    </div>
+  </div>
+</section>
+
+<section id="method" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Method</p>
+    <h2>How it works</h2>
+    <p class="lead">Satellite imagery is defined as much by <em>how</em> it was
+      captured as by what it contains. Captions rarely state the season, the
+      sensor resolution or the atmosphere &mdash; yet those are exactly what a
+      user wants to control.</p>
+    <p>FlowSat conditions on seven acquisition fields alongside text. Rather than
+      folding them into one undifferentiated vector, each is encoded according to
+      its geometry: coordinates are lifted onto the sphere, periodic fields are
+      encoded cyclically, and scalars on their natural scale. The embedding enters
+      through a zero-initialised AdaLN graft, so the model begins identical to its
+      text-to-image initialisation and <em>learns</em> metadata influence rather
+      than having it imposed.</p>
+
+    <figure style="margin:24px 0 6px">
+      <div class="frame"><img src="static/architecture.svg" alt="Architecture" id="arch"></div>
+    </figure>
+
+    <div class="grid">
+      <div class="card"><h4>Geometry-aware encoding</h4>
+        <p>Spherical lift for coordinates, cyclical encoding for dates, natural
+          scaling for GSD and cloud &mdash; ~1.0M parameters, an order of magnitude
+          smaller than a naive per-field MLP and measurably better.</p></div>
+      <div class="card"><h4>Zero-initialised graft</h4>
+        <p>Metadata enters through a zero-init projection: byte-identical to the
+          text-to-image initialisation at step 0, so the pretrained prior is never
+          perturbed.</p></div>
+      <div class="card"><h4>Flow matching</h4>
+        <p>Velocity prediction on a natively flow-matched backbone &mdash; quality
+          samples in ~20 Euler steps instead of 100 denoising steps.</p></div>
+      <div class="card"><h4>Efficient backbone</h4>
+        <p>Sana-0.6B with linear attention and DC-AE 32&times; latents
+          (16&times;16&times;32 at 512 px), with a Gemma-2-2B text encoder.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="results" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Results</p>
+    <h2>FMoW-RGB at 512 px</h2>
+    <p>Identical FID reference statistics and sample set across all models.</p>
+    <table>
+      <thead><tr><th>Model</th><th class="n">FID &darr;</th><th class="n">CLIP &uarr;</th><th class="n">Steps</th></tr></thead>
+      <tbody>
+        <tr><td>DiffusionSat <span style="color:var(--mut)">(ICLR 2024)</span></td><td class="n">35.27</td><td class="n">0.1720</td><td class="n">100</td></tr>
+        <tr><td>GeoDiT-2&Sigma;</td><td class="n">32.11</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+        <tr class="ours"><td>FlowSat <span style="color:var(--mut)">(ours)</span></td><td class="n">31.10</td><td class="n">0.3016</td><td class="n">20</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:15px;color:var(--mut)">Three-seed variance: FID 31.53 &plusmn; 0.32,
+      CLIP 0.3018 &plusmn; 0.0007. The step-count advantage derives from flow matching and
+      the DC-AE/Sana backbone rather than from metadata conditioning; the encoder's
+      own contribution is isolated in the ablation.</p>
+
+    <h3>Samples</h3>
+    <div class="gal" id="gal"></div>
+  </div>
+</section>
+
+<section id="start" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Get started</p>
+    <h2>Generate an image</h2>
+<pre><button class="copy">copy</button><code>git clone https://github.com/sustainability-lab/flowsat-satellite-image.git
+cd flowsat-satellite-image &amp;&amp; pip install -e .
+
+python generate.py --prompt "An airport with a long grey runway."</code></pre>
+    <p>Metadata is optional &mdash; sensible defaults are built in. When you want
+      control, every field is a flag:</p>
+<pre><button class="copy">copy</button><code>python generate.py \
+    --prompt "A farmland with irrigated green fields." \
+    --lat 45.0 --lon 5.0 --month 7 --gsd 0.5</code></pre>
+    <p>Runs on GPU if one is available, CPU otherwise.</p>
+
+    <h3>Use it on your own dataset</h3>
+    <p>FlowSat is not tied to FMoW. Any corpus supplying
+      <em>(image, caption, metadata)</em> triples plugs in through a single
+      adapter class returning three keys:</p>
+<pre><button class="copy">copy</button><code>{
+    "pixel_values": (3, H, W)   # float, normalised to [-1, 1]
+    "input_ids":    (L,)        # tokenised caption
+    "metadata":     (7,)        # lon, lat, gsd, cloud, year, month, day
+}</code></pre>
+    <div class="note"><strong>&rarr;</strong>
+      <a href="https://github.com/sustainability-lab/flowsat-satellite-image/blob/main/docs/NEW_DATASET.md">Using FlowSat on a new dataset</a>
+      &nbsp;&#183;&nbsp;
+      <a href="https://github.com/sustainability-lab/flowsat-satellite-image/blob/main/docs/CAPTIONING.md">Captioning a dataset</a>
+    </div>
+  </div>
+</section>
+
+<section id="cite" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Citation</p>
+    <h2>BibTeX</h2>
+<pre><button class="copy">copy</button><code>@inproceedings{parihar2026flowsat,
+  title     = {FlowSat: Flow-Matching Diffusion Transformers with Metadata
+               Conditioning for Satellite Image Generation},
+  author    = {Parihar, Digvijay Singh and Rishabh and Batra, Nipun and
+               Raman, Shanmuganathan},
+  booktitle = {British Machine Vision Conference (BMVC)},
+  year      = {2026}
+}</code></pre>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <p>Built on <a href="https://github.com/NVlabs/Sana">Sana</a>,
+    <a href="https://github.com/mit-han-lab/efficientvit">DC-AE</a> and
+    <a href="https://huggingface.co/google/gemma-2-2b-it">Gemma-2</a>.
+    Location encoding follows <a href="https://github.com/microsoft/satclip">SatCLIP</a>.</p>
+  <p>Sustainability Lab &#183; IIT Gandhinagar</p>
+</div></footer>
+
+<div id="lb"><img id="lb-img" src="" alt=""></div>
+
+<script>
+/* Missing images degrade to a labelled placeholder instead of a broken icon,
+   so the page looks intentional before the assets are generated. */
+function phFor(el, text, ratio){
+  const d=document.createElement('div');
+  d.className='ph'; d.textContent=text;
+  if(ratio) d.style.aspectRatio=ratio;
+  el.replaceWith(d);
+}
+['teaser','arch'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.onerror=()=>phFor(el, `static/${id==='teaser'?'teaser.jpg — month sweep, caption and seed fixed':'architecture.svg'}`,
+                       id==='teaser'?'16/6':'16/7');
+});
+
+/* ------------------------------------------------------------------
+   Sweep axes. Files are  static/sweeps/<axis>_<key>.jpg
+   Produce them with gen_gallery.py, then tools/export_for_web.py.
+   Nothing below needs editing when you add images.
+   ------------------------------------------------------------------ */
+const AXES = {
+  month:{ label:"Month",
+    keys:["01","03","05","07","09","11"],
+    show:["January","March","May","July","September","November"],
+    ticks:["Jan","Jul","Nov"], start:3,
+    fixed:"caption <code>fixed</code> &#183; seed <code>1234</code> &#183; 39.47&deg;N 0.38&deg;W &#183; 0.5 m/px",
+    hint:"Season changes vegetation and ground colour; the layout stays put." },
+  gsd:{ label:"Ground sample distance",
+    keys:["0.3","0.6","1.0","1.5","2.0","3.0"],
+    show:["0.3 m/px","0.6 m/px","1.0 m/px","1.5 m/px","2.0 m/px","3.0 m/px"],
+    ticks:["0.3 m","1.0 m","3.0 m"], start:1,
+    fixed:"caption <code>fixed</code> &#183; seed <code>1234</code> &#183; July &#183; 25.20&deg;N 55.27&deg;E",
+    hint:"Lower GSD means finer detail \u2014 individual vehicles resolve, then vanish." },
+  cloud:{ label:"Cloud cover",
+    keys:["00","10","25","50","75","90"],
+    show:["0 %","10 %","25 %","50 %","75 %","90 %"],
+    ticks:["0 %","25 %","90 %"], start:0,
+    fixed:"caption <code>fixed</code> &#183; seed <code>1234</code> &#183; July &#183; 47.61&deg;N 122.33&deg;W",
+    hint:"Cloud cover is requested through metadata alone \u2014 the caption never mentions it." }
+};
+
+const stage=document.getElementById('stage'), ph=document.getElementById('stage-ph');
+const slider=document.getElementById('slider'), ticks=document.getElementById('ticks');
+const axisName=document.getElementById('axis-name'), axisVal=document.getElementById('axis-val');
+const fixedEl=document.getElementById('fixed'), hintEl=document.getElementById('hint');
+let axis='month'; const imgs={}, loaded={};
+
+function mount(a){
+  axis=a; const A=AXES[a];
+  stage.querySelectorAll('img').forEach(n=>n.remove());
+  imgs[a]=[]; loaded[a]=0;
+  A.keys.forEach((k,i)=>{
+    const im=new Image();
+    im.alt=`${A.label} ${A.show[i]}`;
+    im.onload =()=>{ loaded[a]++; if(axis===a) ph.style.display='none'; paint(); };
+    im.onerror=()=>{ im.dataset.missing='1'; };
+    im.src=`static/sweeps/${a}_${k}.jpg`;
+    stage.appendChild(im); imgs[a].push(im);
+  });
+  axisName.textContent=A.label; fixedEl.innerHTML=A.fixed; hintEl.textContent=A.hint;
+  slider.max=A.keys.length-1; slider.value=A.start;
+  ticks.innerHTML=A.ticks.map(t=>`<span>${t}</span>`).join('');
+  ph.style.display = loaded[a] ? 'none' : 'flex';
+  paint();
+}
+function paint(){
+  const A=AXES[axis], i=+slider.value;
+  axisVal.textContent=A.show[i];
+  (imgs[axis]||[]).forEach((im,j)=>im.classList.toggle('on', j===i && !im.dataset.missing));
+}
+slider.addEventListener('input',paint);
+document.querySelectorAll('#tabs .tab').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); mount(b.dataset.axis);
+  };
+});
+mount('month');
+
+/* comparison slider: pointer + touch */
+(function(){
+  const box=document.getElementById('cmp'), bar=document.getElementById('cmp-bar');
+  const top=document.getElementById('cmp-a'), bot=document.getElementById('cmp-b');
+  const phc=document.getElementById('cmp-ph');
+  let missing=0;
+  [top,bot].forEach(im=>im.onerror=()=>{ im.style.display='none';
+    if(++missing) phc.style.display='flex'; });
+  let drag=false;
+  const set=e=>{
+    const r=box.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const p=Math.max(0,Math.min(1,(cx-r.left)/r.width))*100;
+    top.style.clipPath=`inset(0 ${100-p}% 0 0)`;
+    bar.style.left=p+'%';
+  };
+  box.addEventListener('mousedown',e=>{drag=true;set(e);});
+  box.addEventListener('touchstart',e=>{drag=true;set(e);},{passive:true});
+  window.addEventListener('mousemove',e=>{if(drag)set(e);});
+  window.addEventListener('touchmove',e=>{if(drag)set(e);},{passive:true});
+  window.addEventListener('mouseup',()=>{drag=false;});
+  window.addEventListener('touchend',()=>{drag=false;});
+})();
+
+/* gallery: probe static/gallery/NN.jpg until one is missing */
+(function(){
+  const gal=document.getElementById('gal'); let n=1, added=0;
+  const finish=()=>{ if(!added)
+    gal.innerHTML='<div class="ph" style="grid-column:1/-1">drop samples into static/gallery/01.jpg, 02.jpg &hellip;</div>'; };
+  const next=()=>{
+    if(n>16) return finish();
+    const src=`static/gallery/${String(n).padStart(2,'0')}.jpg`;
+    const im=new Image();
+    im.onload=()=>{
+      const c=document.createElement('div'); c.className='cell';
+      c.appendChild(im);
+      c.onclick=()=>{ document.getElementById('lb-img').src=src;
+                      document.getElementById('lb').classList.add('on'); };
+      gal.appendChild(c); added++; n++; next();
+    };
+    im.onerror=finish;
+    im.src=src;
+  };
+  next();
+})();
+document.getElementById('lb').onclick=function(){ this.classList.remove('on'); };
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') document.getElementById('lb').classList.remove('on');
+  if(e.key==='ArrowRight'){ slider.value=Math.min(+slider.value+1,+slider.max); paint(); }
+  if(e.key==='ArrowLeft'){ slider.value=Math.max(+slider.value-1,0); paint(); }
+});
+
+document.querySelectorAll('.copy').forEach(b=>{
+  b.onclick=()=>{
+    navigator.clipboard.writeText(b.parentElement.querySelector('code').innerText);
+    const t=b.textContent; b.textContent='copied'; setTimeout(()=>b.textContent=t,1400);
+  };
+});
+
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}),{threshold:.06});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

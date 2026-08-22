@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+env/
+
+# Checkpoints, weights, generated outputs
+/checkpoints/
+*.ckpt
+*.safetensors
+*.pth
+*.pt
+/samples/
+/sweeps/
+/outputs/
+/wandb/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

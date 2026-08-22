@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 430" width="1200" height="430" role="img"
+     aria-label="FlowSat architecture: a caption is encoded by a frozen Gemma-2-2B and enters the Sana DiT through cross-attention, while seven metadata fields pass through a geometry-aware encoder and a zero-initialised graft into the AdaLN modulation. The DiT predicts a velocity field over a 16 by 16 by 32 latent, which a frozen DC-AE decoder turns into a 512 by 512 image.">
+  <style>
+    .box  { fill:#ffffff; stroke:#e4e8ed; stroke-width:1.5; }
+    .soft { fill:#f7f9fb; stroke:#e4e8ed; stroke-width:1.5; }
+    .acc  { fill:#e6f2ef; stroke:#0b6b57; stroke-width:1.5; }
+    .t    { font-family:Inter,-apple-system,"Segoe UI",sans-serif; fill:#0f1216; font-size:17px; font-weight:600; }
+    .s    { font-family:Inter,-apple-system,"Segoe UI",sans-serif; fill:#5d6773; font-size:13.5px; }
+    .m    { font-family:"JetBrains Mono",ui-monospace,monospace; fill:#5d6773; font-size:12.5px; }
+    .lbl  { font-family:Inter,-apple-system,"Segoe UI",sans-serif; fill:#5d6773; font-size:12.5px;
+            font-weight:500; letter-spacing:.05em; }
+    .ln   { stroke:#5d6773; stroke-width:1.5; fill:none; }
+    .hd   { fill:#5d6773; }
+  </style>
+
+  <!-- text branch -->
+  <rect class="soft" x="30" y="58" width="200" height="66" rx="10"/>
+  <text class="t" x="50" y="90">Caption</text>
+  <text class="m" x="50" y="110">“a port with cranes …”</text>
+
+  <rect class="box" x="272" y="58" width="208" height="66" rx="10"/>
+  <text class="t" x="292" y="90">Gemma-2-2B</text>
+  <text class="s" x="292" y="110">frozen text encoder</text>
+
+  <path class="ln" d="M230 91 H263"/><polygon class="hd" points="272,91 263,86.5 263,95.5"/>
+  <path class="ln" d="M480 91 H751"/><polygon class="hd" points="760,91 751,86.5 751,95.5"/>
+  <text class="lbl" x="620" y="80" text-anchor="middle">CROSS-ATTENTION</text>
+
+  <!-- metadata branch -->
+  <rect class="soft" x="30" y="196" width="200" height="66" rx="10"/>
+  <text class="t" x="50" y="228">Metadata (7)</text>
+  <text class="m" x="50" y="248">lon lat gsd cloud y m d</text>
+
+  <rect class="box" x="272" y="196" width="208" height="66" rx="10"/>
+  <text class="t" x="292" y="228">Geometry-aware</text>
+  <text class="s" x="292" y="248">spherical · cyclical · ~1.0M</text>
+
+  <rect class="acc" x="520" y="196" width="150" height="66" rx="10"/>
+  <text class="t" x="540" y="228">Zero-init</text>
+  <text class="s" x="540" y="248">graft</text>
+
+  <path class="ln" d="M230 229 H263"/><polygon class="hd" points="272,229 263,224.5 263,233.5"/>
+  <path class="ln" d="M480 229 H511"/><polygon class="hd" points="520,229 511,224.5 511,233.5"/>
+  <path class="ln" d="M670 229 H751"/><polygon class="hd" points="760,229 751,224.5 751,233.5"/>
+  <text class="lbl" x="670" y="186" text-anchor="middle">AdaLN MODULATION</text>
+
+  <!-- backbone -->
+  <rect class="box" x="760" y="46" width="410" height="228" rx="12"/>
+  <text class="t" x="790" y="86" font-size="19">Sana-0.6B DiT</text>
+  <text class="s" x="790" y="112">28 blocks · linear attention</text>
+  <text class="s" x="790" y="134">AdaLN-single modulation</text>
+  <text class="s" x="790" y="180">velocity prediction</text>
+  <text class="m" x="790" y="202">v = noise - x0</text>
+  <text class="s" x="790" y="242">flow matching · 20 Euler steps</text>
+
+  <!-- generation path -->
+  <path class="ln" d="M965 274 V327"/><polygon class="hd" points="965,336 960.5,327 969.5,327"/>
+
+  <rect class="soft" x="760" y="336" width="410" height="66" rx="10"/>
+  <text class="t" x="790" y="368">Latent</text>
+  <text class="m" x="790" y="388">16 × 16 × 32</text>
+
+  <rect class="box" x="520" y="336" width="150" height="66" rx="10"/>
+  <text class="t" x="540" y="368">DC-AE</text>
+  <text class="s" x="540" y="388">decoder · frozen</text>
+
+  <rect class="acc" x="272" y="336" width="208" height="66" rx="10"/>
+  <text class="t" x="292" y="368">512 × 512 image</text>
+  <text class="s" x="292" y="388">generated acquisition</text>
+
+  <path class="ln" d="M760 369 H679"/><polygon class="hd" points="670,369 679,364.5 679,373.5"/>
+  <path class="ln" d="M520 369 H489"/><polygon class="hd" points="480,369 489,364.5 489,373.5"/>
+
+  <text class="lbl" x="30" y="44">CONDITIONING</text>
+  <text class="lbl" x="30" y="373">OUTPUT</text>
+</svg>
