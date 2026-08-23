@@ -89,7 +89,6 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
   font-size:15px;line-height:1.55;color:var(--ink);background:#fff;border:1px solid var(--line);
   border-radius:10px;transition:border-color .14s ease,box-shadow .14s ease}
 .live textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--accs)}
-.live textarea:disabled{background:var(--soft);color:var(--mut);cursor:not-allowed}
 .live .go{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
 .live .go .btn{cursor:pointer;font-family:inherit}
 .live .go .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
@@ -98,7 +97,6 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .chip{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);
   background:#fff;color:var(--mut);cursor:pointer;font-family:inherit;transition:.14s}
 .chip:hover{border-color:var(--acc);color:var(--acc)}
-.chip[disabled]{opacity:.45;cursor:not-allowed}
 .stat{font-size:13.5px;color:var(--mut);margin-top:12px;min-height:1.6em;display:flex;
   align-items:center;gap:8px}
 .stat.err{color:#a8342a}
@@ -1035,12 +1033,10 @@ if(table && !CALM){
     stat.classList.toggle('err',kind==='err');
     dot.className='dot'+(kind?' '+kind:'');
   };
-  const enable=on=>{
-    ready=on;
-    go.disabled=!on; ta.disabled=!on;
-    chips.querySelectorAll('.chip').forEach(c=>c.disabled=!on);
-  };
+  const enable=on=>{ ready=on; go.disabled=!on; };
 
+  // The caption field is never disabled: the visitor can write, and paste an
+  // example, before the backend has answered or when it is not there at all.
   enable(false);
 
   /* ngrok's free tier intercepts browser-shaped requests with an interstitial
