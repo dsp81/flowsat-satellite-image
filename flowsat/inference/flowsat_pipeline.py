@@ -12,7 +12,8 @@ Provides a clean interface for text-to-satellite-image generation:
     4. Decode latent to pixel space via VAE
 
 Usage:
-    pipeline = FlowSatPipeline.from_pretrained("path/to/model")
+    model = SatSana(...)                     # weights already loaded
+    pipeline = FlowSatPipeline.from_pretrained(model, hf_model_id)
     pipeline = pipeline.to("cuda")
     images = pipeline(
         prompt="a satellite image of an airport",
@@ -24,7 +25,6 @@ Usage:
 
 from __future__ import annotations
 
-import json
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import numpy as np
@@ -39,6 +39,7 @@ from diffusers import AutoencoderKL
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from flowsat.models.sat_sana import SatSana
 from flowsat.flow.flow_sampler import EulerSampler, MidpointSampler, HeunSampler, CFGWrapper
 from flowsat.data.sat_data_util import metadata_normalize
 
@@ -57,7 +58,7 @@ class FlowSatPipeline:
     
     Components:
         - CLIP text encoder + tokenizer
-        - SatDiT transformer (velocity field)
+        - SatSana transformer (velocity field)
         - Stable Diffusion VAE (latent ↔ pixel)
         - Flow ODE sampler (Euler / Midpoint / Heun)
     """
@@ -67,7 +68,7 @@ class FlowSatPipeline:
         vae: AutoencoderKL,
         text_encoder: CLIPTextModel,
         tokenizer: CLIPTokenizer,
-        model: SatDiT,
+        model: SatSana,
         device: torch.device = torch.device("cpu"),
         dtype: torch.dtype = torch.float32,
     ):
@@ -83,49 +84,26 @@ class FlowSatPipeline:
     @classmethod
     def from_pretrained(
         cls,
-        model_dir: str,
-        pretrained_model_name_or_path: Optional[str] = None,
+        model: SatSana,
+        pretrained_model_name_or_path: str,
         torch_dtype: torch.dtype = torch.float32,
         device: str = "cpu",
     ) -> "FlowSatPipeline":
-        """Load pipeline from saved checkpoint.
-        
+        """Assemble a pipeline around an already-constructed model.
+
         Args:
-            model_dir: directory containing sat_dit.pt and config.json.
-            pretrained_model_name_or_path: HF model ID for VAE/text encoder
-                (overrides config if provided).
+            model: the velocity-field transformer, with its weights loaded.
+            pretrained_model_name_or_path: HF model ID supplying the VAE,
+                text encoder and tokenizer.
             torch_dtype: computation dtype.
             device: target device.
         """
-        # Load config
-        config_path = os.path.join(model_dir, "config.json")
-        with open(config_path, "r") as f:
-            config = json.load(f)
-
-        hf_path = pretrained_model_name_or_path or config["pretrained_model_name_or_path"]
+        hf_path = pretrained_model_name_or_path
 
         # Load VAE and text encoder from HuggingFace
         tokenizer = CLIPTokenizer.from_pretrained(hf_path, subfolder="tokenizer")
         text_encoder = CLIPTextModel.from_pretrained(hf_path, subfolder="text_encoder")
         vae = AutoencoderKL.from_pretrained(hf_path, subfolder="vae")
-
-        # Build SatDiT model
-        model_fn = SATDIT_MODELS[config["model_size"]]
-        model = model_fn(
-            latent_size=config["latent_size"],
-            in_channels=config["in_channels"],
-            cross_attention_dim=config["cross_attention_dim"],
-            num_metadata=config.get("num_metadata", 7),
-            use_metadata=config.get("use_metadata", True),
-        )
-
-        # Load weights
-        state_dict = torch.load(
-            os.path.join(model_dir, "sat_dit.pt"),
-            map_location="cpu",
-            weights_only=True,
-        )
-        model.load_state_dict(state_dict)
 
         # Move to device
         device = torch.device(device)
