@@ -79,6 +79,44 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .fixed code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px}
 .hint{font-size:13.5px;color:var(--mut);margin-top:14px;font-style:italic}
 
+/* live demo -------------------------------------------------------------- */
+.live{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;margin-top:26px}
+@media(max-width:800px){.live{grid-template-columns:1fr}}
+.live .stage{aspect-ratio:1}
+.live .stage img{opacity:0;transition:opacity .3s ease}
+.live .stage img.on{opacity:1}
+.live textarea{width:100%;min-height:132px;resize:vertical;padding:13px 14px;font:inherit;
+  font-size:15px;line-height:1.55;color:var(--ink);background:#fff;border:1px solid var(--line);
+  border-radius:10px;transition:border-color .14s ease,box-shadow .14s ease}
+.live textarea:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 3px var(--accs)}
+.live textarea:disabled{background:var(--soft);color:var(--mut);cursor:not-allowed}
+.live .go{display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap}
+.live .go .btn{cursor:pointer;font-family:inherit}
+.live .go .btn[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 12px}
+.chip{font-size:12.5px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+  background:#fff;color:var(--mut);cursor:pointer;font-family:inherit;transition:.14s}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip[disabled]{opacity:.45;cursor:not-allowed}
+.stat{font-size:13.5px;color:var(--mut);margin-top:12px;min-height:1.6em;display:flex;
+  align-items:center;gap:8px}
+.stat.err{color:#a8342a}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--mut);flex:none}
+.dot.up{background:var(--acc)}
+.dot.down{background:#c2703f}
+.dot.busy{background:var(--acc);animation:pulse 1.15s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.live .stage .scan{position:absolute;inset:0;z-index:2;display:none;
+  background:linear-gradient(180deg,transparent 0%,rgba(11,107,87,.16) 48%,transparent 96%);
+  background-size:100% 220%;animation:scan 1.5s linear infinite}
+.live.working .stage .scan{display:block}
+@keyframes scan{0%{background-position:0 -110%}100%{background-position:0 110%}}
+@media(prefers-reduced-motion:reduce){
+  .dot.busy,.live .stage .scan{animation:none}
+  .live .stage .scan{background:rgba(11,107,87,.10)}
+}
+
 .cmp{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);aspect-ratio:2/1;cursor:ew-resize;user-select:none;background:var(--soft)}
 .cmp img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cmp .top{clip-path:inset(0 50% 0 0)}
@@ -278,7 +316,7 @@ section,header{background:transparent}
 <nav><div class="wrap">
   <span class="brand">FlowSat</span>
   <span class="links" style="display:flex;gap:22px">
-    <a href="#explore">Explore</a><a href="#method">Method</a>
+    <a href="#explore">Explore</a><a href="#live">Live</a><a href="#method">Method</a>
     <a href="#control">Controllability</a>
     <a href="#results">Results</a><a href="#start">Get started</a>
     <a href="#cite">Cite</a>
@@ -382,6 +420,46 @@ section,header{background:transparent}
               aria-label="Replay the comparison">&#10227;</button>
       <span class="tag l">January</span>
       <span class="tag r">July</span>
+    </div>
+  </div>
+</section>
+
+<section id="live" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Live</p>
+    <h2>Write a caption, get a satellite image</h2>
+    <p class="lead">The sweeps above hold the caption fixed and move the metadata.
+      This does the opposite: the acquisition is pinned to one scene and you supply
+      the words. Generation runs on a single A100 in our lab, so it is one image at
+      a time &mdash; expect a few seconds.</p>
+
+    <div class="live" id="live">
+      <div class="stage" id="live-stage">
+        <div class="scan" aria-hidden="true"></div>
+        <img id="live-img" alt="">
+        <div class="ph" id="live-ph">your image appears here</div>
+      </div>
+
+      <div>
+        <div class="chips" id="live-chips"></div>
+        <label class="vh" for="live-prompt">Caption</label>
+        <textarea id="live-prompt" maxlength="1200" spellcheck="false"
+          placeholder="Describe the scene &mdash; the palette, the terrain, the structures and where they sit. Longer, denser captions follow more closely."></textarea>
+        <div class="go">
+          <button class="btn" id="live-go" type="button">Generate</button>
+          <span class="stat" id="live-stat"><span class="dot" id="live-dot"></span><span id="live-msg">checking the GPU&hellip;</span></span>
+        </div>
+
+        <div class="fixed">
+          Fixed for every generation:
+          <code>lon 5.00&deg;</code> <code>lat 45.00&deg;</code> &mdash; southern France,
+          <code>0.5 m/px</code>, <code>0% cloud</code>, <code>2016-07-15</code>.
+          20 Euler steps, text guidance 2.5, metadata guidance 2.0.
+        </div>
+        <p class="hint">FlowSat saw mostly dense 100&ndash;200 word captions in
+          training. A short prompt still works, but leaves more to the model &mdash;
+          if a result disappoints, lengthen the description before anything else.</p>
+      </div>
     </div>
   </div>
 </section>
@@ -890,6 +968,152 @@ if(table && !CALM){
     }
   },true);
 })();
+})();
+
+/* ------------------------------------------------------------------
+   Live generation.
+
+   GitHub Pages is static, so the model runs on a lab GPU reached over a
+   tunnel. static/backend.json holds the endpoint:
+
+       { "endpoint": "https://<host>", "note": "optional message" }
+
+   Changing tunnels means editing that one file — nothing here. If the file
+   is missing, the endpoint is empty, or /health does not answer, the section
+   states plainly that the demo is offline and disables itself rather than
+   hanging on a request that will never land.
+   ------------------------------------------------------------------ */
+(()=>{
+  const box=document.getElementById('live');
+  if(!box) return;
+  const img =document.getElementById('live-img'),
+        ph  =document.getElementById('live-ph'),
+        ta  =document.getElementById('live-prompt'),
+        go  =document.getElementById('live-go'),
+        dot =document.getElementById('live-dot'),
+        msg =document.getElementById('live-msg'),
+        stat=document.getElementById('live-stat'),
+        chips=document.getElementById('live-chips');
+
+  const EXAMPLES=[
+    ["Airport",
+     "A regional airport under clear midday light. A single long grey runway "+
+     "runs diagonally across the frame, flanked by taxiways and a pale concrete "+
+     "apron with several small aircraft parked in a row. Low rectangular hangars "+
+     "with bright metal roofs sit along the northern edge, and dry grass in "+
+     "muted olive and straw tones fills the space between the paved surfaces."],
+    ["Port",
+     "A working container port on a calm dark harbour. Long straight quays edge "+
+     "the water, stacked with rows of shipping containers in saturated reds, "+
+     "blues and rust oranges forming a dense rectilinear grid. Gantry cranes cast "+
+     "thin shadows across the concrete. Access roads and rail sidings run inland "+
+     "toward large flat warehouse roofs in pale grey."],
+    ["Farmland",
+     "Irrigated farmland in high summer. Large rectangular fields in vivid green "+
+     "and yellow-green tile the frame, separated by narrow dirt access tracks and "+
+     "thin dark treelines. A few circular pivot-irrigated plots interrupt the grid. "+
+     "Bare soil in warm tan shows at the field margins where crops have not closed."],
+    ["Solar farm",
+     "A utility-scale solar installation on flat arid ground. Dozens of long "+
+     "parallel panel rows read as dark blue-grey bands against pale sandy soil, "+
+     "aligned in neat blocks separated by service tracks. A small substation with "+
+     "light gravel hardstanding sits at one corner, and sparse scrub vegetation "+
+     "speckles the untouched land around the perimeter."],
+  ];
+  EXAMPLES.forEach(([label,text])=>{
+    const b=document.createElement('button');
+    b.type='button'; b.className='chip'; b.textContent=label;
+    b.addEventListener('click',()=>{ ta.value=text; ta.focus();
+      ta.setSelectionRange(text.length,text.length); });
+    chips.appendChild(b);
+  });
+
+  let endpoint='', ready=false, busy=false;
+
+  const say=(text,kind)=>{
+    msg.textContent=text;
+    stat.classList.toggle('err',kind==='err');
+    dot.className='dot'+(kind?' '+kind:'');
+  };
+  const enable=on=>{
+    ready=on;
+    go.disabled=!on; ta.disabled=!on;
+    chips.querySelectorAll('.chip').forEach(c=>c.disabled=!on);
+  };
+
+  enable(false);
+
+  /* ngrok's free tier intercepts browser-shaped requests with an interstitial
+     page unless this header is present. Harmless on any other host. */
+  const HDR={'ngrok-skip-browser-warning':'1'};
+
+  const timeout=(ms,promise)=>Promise.race([promise,
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))]);
+
+  /* 1. where is the backend, 2. is it answering */
+  (async()=>{
+    let cfg;
+    try{
+      const r=await timeout(6000,fetch('static/backend.json',{cache:'no-store'}));
+      if(!r.ok) throw new Error(r.status);
+      cfg=await r.json();
+    }catch(e){
+      return say('Live generation is not configured for this deployment.','down');
+    }
+    endpoint=(cfg.endpoint||'').replace(/\/+$/,'');
+    if(!endpoint) return say(cfg.note||'The demo GPU is offline right now.','down');
+
+    try{
+      const r=await timeout(8000,fetch(endpoint+'/health',{cache:'no-store',headers:HDR}));
+      if(!r.ok) throw new Error(r.status);
+      const h=await r.json();
+      enable(true);
+      say(`Ready — ${h.model||'FlowSat'} on ${h.device||'GPU'}.`,'up');
+    }catch(e){
+      say('The demo GPU is offline right now. Everything below still works, and '+
+          'the code runs locally.','down');
+    }
+  })();
+
+  const generate=async()=>{
+    if(!ready||busy) return;
+    const prompt=ta.value.trim();
+    if(!prompt){ ta.focus(); return say('Type a caption first.','down'); }
+
+    busy=true; go.disabled=true; box.classList.add('working');
+    const t0=Date.now();
+    const tick=setInterval(()=>say(
+      `Generating… ${((Date.now()-t0)/1000).toFixed(1)}s`,'busy'),100);
+    say('Generating…','busy');
+
+    try{
+      const r=await timeout(180000,fetch(endpoint+'/generate',{
+        method:'POST',
+        headers:Object.assign({'Content-Type':'application/json'},HDR),
+        body:JSON.stringify({prompt})
+      }));
+      const data=await r.json().catch(()=>({}));
+      clearInterval(tick);
+      if(!r.ok) throw new Error(data.error||`request failed (${r.status})`);
+      img.src=data.image;
+      img.alt='Satellite image generated from the caption: '+prompt.slice(0,180);
+      img.classList.add('on');
+      ph.style.display='none';
+      say(`Done in ${(data.ms/1000).toFixed(1)}s — seed ${data.seed}.`,'up');
+    }catch(e){
+      clearInterval(tick);
+      say(e.message==='timeout'
+            ? 'The GPU did not answer in time — try again.'
+            : (e.message||'Generation failed.'),'err');
+    }finally{
+      busy=false; go.disabled=!ready; box.classList.remove('working');
+    }
+  };
+
+  go.addEventListener('click',generate);
+  ta.addEventListener('keydown',e=>{
+    if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){ e.preventDefault(); generate(); }
+  });
 })();
 </script>
 </body>

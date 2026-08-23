@@ -1,0 +1,5 @@
+{
+  "endpoint": "",
+  "note": "The demo GPU is offline right now. Everything below still works, and the code runs locally.",
+  "_comment": "Set 'endpoint' to the public tunnel URL for the machine running flowsat_serve/server.py (no trailing slash). Leave it empty to show the offline notice instead of a broken demo."
+}
