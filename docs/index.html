@@ -450,9 +450,10 @@ section,header{background:transparent}
 
         <div class="fixed">
           Fixed for every generation:
-          <code>lon 5.00&deg;</code> <code>lat 45.00&deg;</code> &mdash; southern France,
-          <code>0.5 m/px</code>, <code>0% cloud</code>, <code>2016-07-15</code>.
-          20 Euler steps, text guidance 2.5, metadata guidance 2.0.
+          <code>lon &minus;95.00&deg;</code> <code>lat 39.10&deg;</code> &mdash; the
+          US plains, <code>0.3 m/px</code>, <code>0% cloud</code>,
+          <code>2016-07-15</code>. 20 Euler steps, text guidance 2.5, and a pinned
+          noise seed &mdash; so the same caption always returns the same image.
         </div>
         <p class="hint">FlowSat saw mostly dense 100&ndash;200 word captions in
           training. A short prompt still works, but leaves more to the model &mdash;
@@ -994,12 +995,6 @@ if(table && !CALM){
         chips=document.getElementById('live-chips');
 
   const EXAMPLES=[
-    ["Airport",
-     "A regional airport under clear midday light. A single long grey runway "+
-     "runs diagonally across the frame, flanked by taxiways and a pale concrete "+
-     "apron with several small aircraft parked in a row. Low rectangular hangars "+
-     "with bright metal roofs sit along the northern edge, and dry grass in "+
-     "muted olive and straw tones fills the space between the paved surfaces."],
     ["Port",
      "A working container port on a calm dark harbour. Long straight quays edge "+
      "the water, stacked with rows of shipping containers in saturated reds, "+
@@ -1007,16 +1002,17 @@ if(table && !CALM){
      "thin shadows across the concrete. Access roads and rail sidings run inland "+
      "toward large flat warehouse roofs in pale grey."],
     ["Farmland",
-     "Irrigated farmland in high summer. Large rectangular fields in vivid green "+
-     "and yellow-green tile the frame, separated by narrow dirt access tracks and "+
-     "thin dark treelines. A few circular pivot-irrigated plots interrupt the grid. "+
-     "Bare soil in warm tan shows at the field margins where crops have not closed."],
-    ["Solar farm",
-     "A utility-scale solar installation on flat arid ground. Dozens of long "+
-     "parallel panel rows read as dark blue-grey bands against pale sandy soil, "+
-     "aligned in neat blocks separated by service tracks. A small substation with "+
-     "light gravel hardstanding sits at one corner, and sparse scrub vegetation "+
-     "speckles the untouched land around the perimeter."],
+     "Irrigated farmland at the height of summer. Large rectangular fields in "+
+     "vivid green and ripening golden yellow tile the frame in a regular "+
+     "patchwork, divided by narrow pale dirt access tracks and thin dark rows of "+
+     "trees. Bare tan soil shows along the field margins, and a small farm "+
+     "building with a bright roof sits near one corner."],
+    ["Stadium",
+     "A large oval sports stadium seen from directly overhead. A vivid green "+
+     "playing field sits at the centre, enclosed by a ring of tiered seating in "+
+     "grey and dark red, with a white roof canopy over the stands. A wide pale "+
+     "concrete concourse surrounds the bowl, and rows of parked cars fill the "+
+     "adjacent lots, with green trees along the approach roads."],
   ];
   EXAMPLES.forEach(([label,text])=>{
     const b=document.createElement('button');
