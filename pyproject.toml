@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flowsat"
+version = "0.1.0"
+description = "Flow-Matching Diffusion Transformers with Metadata Conditioning for Satellite Image Generation"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Digvijay Singh Parihar" },
+    { name = "Rishabh Mondal" },
+    { name = "Nipun Batra" },
+]
+keywords = ["diffusion", "flow-matching", "satellite-imagery", "remote-sensing", "generative-models"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+
+# Imported unconditionally by the shipped modules:
+#   torch, torchvision  -- models, dataset transforms, training
+#   diffusers           -- SanaTransformer2DModel, AutoencoderDC
+#   transformers        -- Gemma-2 tokenizer / text encoder
+#   accelerate          -- training loop (flowsat/training/train_flowsat_sana.py)
+#   numpy, pillow, tqdm -- image I/O and progress reporting
+dependencies = [
+    "torch>=2.1",
+    "torchvision>=0.16",
+    "diffusers>=0.32.0",
+    "transformers>=4.42.0",
+    "accelerate>=0.27.0",
+    "numpy>=1.24",
+    "pillow>=9.0",
+    "tqdm>=4.65",
+]
+
+[project.optional-dependencies]
+# Imported lazily by flowsat/data/*: GeoTIFF reading, WKT polygon parsing,
+# the optional fmow-meta.csv lookup, and reverse geocoding for short captions.
+# Each has a working fallback, so the package runs without them.
+data = [
+    "rasterio>=1.3",
+    "shapely>=2.0",
+    "pandas>=2.0",
+    "reverse_geocoder>=1.5",
+]
+# Imported lazily by the training script behind --use_8bit_adam / --wandb.
+train = [
+    "bitsandbytes>=0.41",
+    "wandb>=0.16",
+]
+all = [
+    "flowsat[data,train]",
+]
+
+[project.urls]
+Homepage = "https://dsp81.github.io/flowsat-satellite-image/"
+Repository = "https://github.com/dsp81/flowsat-satellite-image"
+
+[tool.setuptools.packages.find]
+include = ["flowsat*"]
