@@ -1,5 +1,5 @@
 {
-  "endpoint": "",
+  "endpoint": "https://significance-dental-commerce-downloads.trycloudflare.com",
   "note": "The demo GPU is offline right now. Everything below still works, and the code runs locally.",
-  "_comment": "Set 'endpoint' to the public tunnel URL for the machine running flowsat_serve/server.py (no trailing slash). Leave it empty to show the offline notice instead of a broken demo."
+  "_comment": "Public URL of the machine running flowsat_serve/server.py, no trailing slash. This is a cloudflared quick tunnel: the URL changes every time the tunnel restarts, so re-run flowsat_serve/run.sh and paste the new one here. Set it to \"\" to show the offline notice instead of a broken demo."
 }
