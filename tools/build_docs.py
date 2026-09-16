@@ -69,7 +69,7 @@ SHELL = """<!DOCTYPE html>
 <meta property="og:url" content="https://dsp81.github.io/flowsat-satellite-image/{out}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/doc.css">
 <script>document.documentElement.className+=" js"</script>
 </head>
@@ -86,7 +86,8 @@ SHELL = """<!DOCTYPE html>
   <a class="brand" href="./">FlowSat</a>
   <span class="links" style="display:flex;gap:22px">
     <a href="./#explore">Explore</a><a href="./#method">Method</a>
-    <a href="./#results">Results</a><a href="./#start">Get started</a>
+    <a href="./#results">Results</a><a href="./#control">Controllability</a>
+    <a href="./#limits">Limitations</a><a href="./#start">Get started</a>
   </span>
   <a href="{repo}" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
 </div></nav>

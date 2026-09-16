@@ -2,8 +2,10 @@
    Generated pages link this file; edit here, not in the generated HTML. */
 :root{
   --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
-  --acc:#0b6b57; --accs:#e6f2ef; --max:1000px;
+  --acc:#0b6b57; --acc2:#12a37f; --accs:#e6f2ef; --max:1000px;
+  --disp:"Space Grotesk",Inter,-apple-system,sans-serif;
 }
+h1,h2,h3,h4,.kicker,nav .brand,.toc .t,article th{font-family:var(--disp)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; scroll-padding-top:76px}
 body{margin:0;background:var(--bg);color:var(--ink);
@@ -15,17 +17,26 @@ a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
 nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
-nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;color:var(--ink)}
+nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;color:var(--ink);
+  display:flex;align-items:center;gap:8px}
+nav .brand::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,var(--acc2),var(--acc))}
 nav .brand:hover{text-decoration:none}
 nav a{color:var(--mut);font-size:14.5px;font-weight:500}
 nav a:hover{color:var(--ink);text-decoration:none}
 @media(max-width:700px){nav .links{display:none}}
 
 header.doc{padding:52px 0 30px;border-bottom:1px solid var(--line)}
-.kicker{color:var(--acc);font-size:13px;font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;margin:0 0 10px}
+.kicker{color:var(--acc);font-size:12.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.kicker::before{content:"";width:22px;height:2px;border-radius:2px;flex:none;
+  background:linear-gradient(90deg,var(--acc),var(--acc2))}
 header.doc h1{font-size:clamp(30px,4.4vw,42px);line-height:1.12;font-weight:700;
-  letter-spacing:-.024em;margin:0 0 12px}
+  letter-spacing:-.028em;margin:0 0 12px;color:var(--ink)}
+@supports (-webkit-background-clip:text){
+  header.doc h1{background:linear-gradient(162deg,var(--ink) 34%,#14705c 78%,var(--acc2));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+}
 header.doc .sub{font-size:18px;color:var(--mut);max-width:720px;margin:0}
 
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:44px;
@@ -33,7 +44,7 @@ header.doc .sub{font-size:18px;color:var(--mut);max-width:720px;margin:0}
 @media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr);gap:0}}
 
 article{max-width:760px;min-width:0}
-article h2{font-size:25px;font-weight:650;letter-spacing:-.016em;margin:42px 0 12px;
+article h2{font-size:26px;font-weight:600;letter-spacing:-.02em;margin:42px 0 12px;
   padding-top:6px}
 article h2:first-child{margin-top:0}
 article h3{font-size:18.5px;font-weight:600;margin:30px 0 10px}
@@ -43,7 +54,8 @@ article li{margin:0 0 9px}
 article li>ul,article li>ol{margin:9px 0 0}
 article strong{font-weight:650}
 article hr{border:none;border-top:1px solid var(--line);margin:34px 0}
-article blockquote{margin:20px 0;padding:14px 18px;background:var(--accs);
+article blockquote{margin:20px 0;padding:15px 19px;
+  background:linear-gradient(120deg,var(--accs),#f3f9f7 70%);
   border-left:3px solid var(--acc);border-radius:0 9px 9px 0;color:#28303a}
 article blockquote p:last-child{margin:0}
 
@@ -77,7 +89,7 @@ footer p{margin:0 0 6px}
 
 /* ---------- polish: depth, motion, focus ---------------------------------- */
 #prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
-  background:linear-gradient(90deg,var(--acc),#12a37f);transition:width .08s linear}
+  background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .08s linear}
 
 a:focus-visible,button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;
   border-radius:4px}

@@ -13,11 +13,12 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
-  --acc:#0b6b57; --accs:#e6f2ef; --max:1000px;
+  --acc:#0b6b57; --acc2:#12a37f; --accs:#e6f2ef; --max:1000px;
+  --disp:"Space Grotesk",Inter,-apple-system,sans-serif;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; scroll-padding-top:64px}
@@ -27,27 +28,36 @@ a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
 
 nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
-nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto}
+nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;display:flex;align-items:center;gap:8px}
+nav .brand::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;
+  background:linear-gradient(135deg,var(--acc2),var(--acc))}
 nav a{color:var(--mut);font-size:14.5px;font-weight:500}
 nav a:hover{color:var(--ink);text-decoration:none}
 @media(max-width:700px){nav .links{display:none}}
 
 header{padding:64px 0 44px;text-align:center;border-bottom:1px solid var(--line)}
 .venue{display:inline-block;font-size:12.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--acc);background:var(--accs);padding:6px 14px;border-radius:999px}
-h1{font-size:clamp(38px,6vw,60px);line-height:1.05;font-weight:700;margin:20px 0 12px;letter-spacing:-.028em}
+h1{font-size:clamp(38px,6vw,60px);line-height:1.05;font-weight:700;margin:20px 0 12px;letter-spacing:-.032em;color:var(--ink)}
+@supports (-webkit-background-clip:text){
+  h1{background:linear-gradient(118deg,var(--ink) 18%,#0f6d58 58%,#18ab86);
+     -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+}
 .sub{font-size:clamp(17px,2.2vw,21px);color:var(--mut);max-width:740px;margin:0 auto 24px}
 .auth{font-size:17px;margin:0 0 5px}.auth a{color:var(--ink)}
 .aff{font-size:15px;color:var(--mut);margin:0 0 26px}
 .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:9px;font-size:15px;font-weight:500;background:var(--ink);color:#fff;border:1px solid var(--ink);transition:.14s}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:-.005em;background:linear-gradient(170deg,#0e8168,var(--acc));color:#fff;border:1px solid #0a5f4e;transition:.14s}
 .btn:hover{text-decoration:none;opacity:.88;transform:translateY(-1px)}
 .btn.g{background:#fff;color:var(--ink);border-color:var(--line)}
 .btn.g:hover{border-color:var(--mut)}
 
 section{padding:56px 0;border-bottom:1px solid var(--line)}
-h2{font-size:28px;font-weight:650;letter-spacing:-.016em;margin:0 0 10px}
-.kicker{color:var(--acc);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 8px}
-h3{font-size:19px;font-weight:600;margin:28px 0 10px}
+h1,h2,h3,h4,.kicker,.venue,nav .brand,.btn,.tab,th,.rowlab .k{font-family:var(--disp)}
+h2{font-size:30px;font-weight:600;letter-spacing:-.022em;margin:0 0 10px}
+.kicker{color:var(--acc);font-size:12.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin:0 0 10px;display:flex;align-items:center;gap:10px}
+.kicker::before{content:"";width:22px;height:2px;border-radius:2px;flex:none;
+  background:linear-gradient(90deg,var(--acc),var(--acc2))}
+h3{font-size:19.5px;font-weight:600;letter-spacing:-.012em;margin:30px 0 10px}
 p{margin:0 0 16px} .lead{font-size:19px;color:#28303a}
 
 figure{margin:0} img{max-width:100%;display:block}
@@ -87,8 +97,15 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 .cmp .tag{position:absolute;bottom:12px;padding:5px 11px;border-radius:7px;background:rgba(10,12,15,.72);color:#fff;font-size:12.5px;font-weight:500;pointer-events:none}
 .cmp .tag.l{left:12px} .cmp .tag.r{right:12px}
 
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(228px,1fr));gap:18px;margin:26px 0 6px}
-.card{background:var(--soft);border:1px solid var(--line);border-radius:11px;padding:20px}
+/* Flex, not grid: a trailing row that does not fill (five cards in threes)
+   centres itself instead of hugging the left edge. */
+.grid{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin:26px 0 6px}
+.card{flex:1 1 240px;background:var(--soft);border:1px solid var(--line);
+  border-radius:14px;padding:21px;position:relative;overflow:hidden}
+@media(min-width:780px){
+  .grid.cols-2>.card{flex:0 1 calc(50% - 9px)}
+  .grid.cols-3>.card{flex:0 1 calc(33.333% - 12px)}
+}
 .card h4{margin:0 0 7px;font-size:16px;font-weight:600}
 .card p{margin:0;font-size:14.5px;color:var(--mut);line-height:1.55}
 .gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-top:22px}
@@ -109,14 +126,14 @@ code{font-family:"JetBrains Mono",monospace;font-size:.9em}
 p code,li code,td code{background:var(--soft);padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
 .copy{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);color:#cfd6de;border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif}
 .copy:hover{background:rgba(255,255,255,.18);color:#fff}
-.note{background:var(--accs);border-left:3px solid var(--acc);padding:15px 18px;border-radius:0 9px 9px 0;margin:20px 0;font-size:15.5px}
+.note{background:linear-gradient(120deg,var(--accs),#f3f9f7 70%);border-left:3px solid var(--acc);padding:16px 19px;border-radius:0 10px 10px 0;margin:20px 0;font-size:15.5px}
 footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
 .js .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
 .js .reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}}
 /* ---------- polish: depth, motion, focus ---------------------------------- */
 #prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
-  background:linear-gradient(90deg,var(--acc),#12a37f);transition:width .08s linear}
+  background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .08s linear}
 @media(prefers-reduced-motion:reduce){#prog{transition:none}}
 
 a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--acc);
@@ -151,8 +168,13 @@ header::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150
 
 .card{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
   background:linear-gradient(180deg,#fff,var(--soft))}
-.card:hover{transform:translateY(-3px);border-color:#d3dae2;
-  box-shadow:0 10px 26px -14px rgba(15,18,22,.35)}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--acc),var(--acc2));
+  transform:scaleX(0);transform-origin:0 50%;transition:transform .3s ease}
+.card:hover::before{transform:scaleX(1)}
+.card:hover{transform:translateY(-3px);border-color:#cfd8e0;
+  box-shadow:0 12px 30px -14px rgba(11,107,87,.32)}
+@media(prefers-reduced-motion:reduce){.card::before{transition:none}}
 
 tbody tr{transition:background .18s ease}
 tbody tr:hover{background:var(--soft)}
@@ -197,6 +219,8 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
 .stag.in>*:nth-child(2){transition-delay:.12s}
 .stag.in>*:nth-child(3){transition-delay:.2s}
 .stag.in>*:nth-child(4){transition-delay:.28s}
+.stag.in>*:nth-child(5){transition-delay:.36s}
+.stag.in>*:nth-child(6){transition-delay:.44s}
 
 @media(prefers-reduced-motion:reduce){
   header::before,.venue::after,.stage img.on{animation:none}
@@ -325,7 +349,7 @@ section,header{background:transparent}
 
 <section class="reveal">
   <div class="wrap">
-    <p class="lead" style="max-width:830px;margin:0 auto 30px;text-align:center">
+    <p class="lead" style="max-width:790px;margin:0 auto 30px">
       FlowSat generates 512&nbsp;px satellite imagery from a caption <em>and</em> the
       acquisition metadata that defines how the image was captured &mdash; where on
       Earth, at what ground resolution, on what date, under how much cloud. Most
@@ -453,7 +477,7 @@ section,header{background:transparent}
       <div class="frame"><img src="static/architecture.svg" alt="Architecture" id="arch"></div>
     </figure>
 
-    <div class="grid stag">
+    <div class="grid cols-2 stag">
       <div class="card"><h4>Geometry-aware encoding</h4>
         <p>Sphere for coordinates, circle for dates, natural scale for resolution
           and cloud &mdash; 1.04M parameters, an order of magnitude smaller than a
@@ -570,7 +594,7 @@ python -m flowsat.evaluation.evaluate_fmow \
       the opposite reason &mdash; captions describe country, season, haze and
       contrast constantly.</p>
 
-    <div class="grid stag">
+    <div class="grid cols-3 stag">
       <div class="card"><h4>Do my captions describe it?</h4>
         <p>If yes, either take it out of the captions or accept that the field
           will be weak.</p></div>
@@ -598,7 +622,7 @@ python -m flowsat.evaluation.evaluate_fmow \
       protocol rather than to a model. Worth knowing before comparing anything
       against this page.</p>
 
-    <div class="grid stag">
+    <div class="grid cols-3 stag">
       <div class="card"><h4>Geography is not in the quality table</h4>
         <p>FMoW's test sidecars carry no coordinates, so longitude and latitude
           are (0,&nbsp;0) for every scored sample. FID and CLIP exercise date,
