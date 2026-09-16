@@ -245,6 +245,59 @@
       1980. <code>--uncond_metadata real</code> passes the true metadata to both branches and
       guides the text direction alone, which is what <code>generate.py</code> does. It is a
       different sampler, and the two cannot be mixed within a comparison.</p>
+      <h2 id="which-text-encoder">Which text encoder</h2>
+      <p>Gemma-2 can be loaded two ways, and they give measurably different numbers. The
+      choice is a flag, and it is part of the protocol hash:</p>
+      <pre><code class="language-bash">--text_encoder bf16-causal   # what the paper submission used
+      --text_encoder fp32-eager    # the default; matches training
+      </code></pre>
+      <table>
+      <thead>
+      <tr>
+      <th></th>
+      <th><code>bf16-causal</code></th>
+      <th><code>fp32-eager</code></th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td>class</td>
+      <td><code>AutoModelForCausalLM</code></td>
+      <td><code>AutoModel</code></td>
+      </tr>
+      <tr>
+      <td>dtype</td>
+      <td>the run dtype (bf16)</td>
+      <td>float32</td>
+      </tr>
+      <tr>
+      <td>attention</td>
+      <td>library default</td>
+      <td><code>eager</code></td>
+      </tr>
+      <tr>
+      <td>read-out</td>
+      <td><code>hidden_states[-1]</code></td>
+      <td><code>last_hidden_state</code></td>
+      </tr>
+      <tr>
+      <td>mask</td>
+      <td>the tokenizer's</td>
+      <td>built from pad ids, all-pad rows guarded</td>
+      </tr>
+      </tbody>
+      </table>
+      <p><strong><code>bf16-causal</code> is what <code>eval_sana.py</code> did, so it is the path the reported
+      numbers were measured on.</strong> It is kept for exactly that reason: a published
+      number nobody can reproduce is not much of a published number.</p>
+      <p><code>fp32-eager</code> is what training uses, and it is the default here because the other
+      path is fragile. Gemma-2 soft-caps its attention logits; in half precision off
+      the eager path that can overflow to NaN, and NaN conditioning decodes to a black
+      image rather than raising, so the metrics get computed on black frames. Whether
+      it happens depends on the transformers version and the GPU, which is why the run
+      aborts on non-finite conditioning instead of reporting a number.</p>
+      <p>If you are checking the published row, use <code>bf16-causal</code>. If you are measuring a
+      new model, use the default and say so.</p>
       <h2 id="two-things-that-will-silently-ruin-a-run">Two things that will silently ruin a run</h2>
       <p><strong>Black images.</strong> Gemma-2 soft-caps its attention logits, and in half precision
       off the eager attention path that overflows to NaN — NaN conditioning, NaN
@@ -310,6 +363,7 @@
       <a href="#what-you-need">What you need</a>
       <a href="#what-the-four-metrics-mean">What the four metrics mean</a>
       <a href="#what-makes-two-runs-comparable">What makes two runs comparable</a>
+      <a href="#which-text-encoder">Which text encoder</a>
       <a href="#two-things-that-will-silently-ruin-a-run">Two things that will silently ruin a run</a>
       <a href="#notes-on-the-test-split">Notes on the test split</a>
       <a href="#getting-the-weights">Getting the weights</a>

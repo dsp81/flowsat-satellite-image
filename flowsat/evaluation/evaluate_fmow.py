@@ -214,23 +214,44 @@ def load_model(args, device, dtype):
 
 
 def load_encoders(args, device, dtype):
-    """Gemma-2 and the DC-AE, loaded exactly as training loads them.
+    """Gemma-2 and the DC-AE.
 
-    fp32 and eager attention are not a preference. Gemma-2 soft-caps its
-    attention logits, and in half precision off the eager path that overflows to
-    NaN in this stack -- silently, since a NaN conditioning vector decodes to a
-    black image rather than raising. The conditioning is cast to the
-    transformer's dtype at the boundary instead.
+    Two text-encoder paths, because they give measurably different numbers and
+    the published row was measured on one of them:
+
+    fp32-eager (default)
+        AutoModel, float32, attn_implementation="eager", last_hidden_state.
+        What training uses. Gemma-2 soft-caps its attention logits, and in half
+        precision off the eager path that can overflow to NaN -- silently, since
+        NaN conditioning decodes to a black image rather than raising.
+
+    bf16-causal
+        AutoModelForCausalLM at the run dtype, default attention,
+        hidden_states[-1]. This is what eval_sana.py did, and therefore what the
+        **paper submission** numbers were measured with. Kept so those numbers
+        stay reproducible. On some transformers/GPU combinations it is the NaN
+        path above, which is why the run aborts on non-finite conditioning
+        instead of reporting metrics on black images.
+
+    Either way the conditioning is cast to the transformer's dtype at the
+    boundary.
     """
     from diffusers import AutoencoderDC
-    from transformers import AutoModel, AutoTokenizer
+    from transformers import AutoModel, AutoModelForCausalLM, AutoTokenizer
 
-    logger.info("loading Gemma-2 tokenizer + text encoder (fp32, eager attention)")
     tokenizer = AutoTokenizer.from_pretrained(args.pretrained_sana,
                                               subfolder="tokenizer")
-    text_encoder = AutoModel.from_pretrained(
-        args.pretrained_sana, subfolder="text_encoder",
-        attn_implementation="eager").to(device, torch.float32).eval()
+    if args.text_encoder == "bf16-causal":
+        logger.info(f"loading Gemma-2 text encoder (AutoModelForCausalLM, "
+                    f"{args.dtype}, default attention) -- the paper-submission path")
+        text_encoder = AutoModelForCausalLM.from_pretrained(
+            args.pretrained_sana, subfolder="text_encoder",
+            torch_dtype=dtype).to(device).eval()
+    else:
+        logger.info("loading Gemma-2 text encoder (AutoModel, fp32, eager attention)")
+        text_encoder = AutoModel.from_pretrained(
+            args.pretrained_sana, subfolder="text_encoder",
+            attn_implementation="eager").to(device, torch.float32).eval()
 
     logger.info("loading DC-AE")
     vae = AutoencoderDC.from_pretrained(args.pretrained_sana, subfolder="vae",
@@ -239,16 +260,23 @@ def load_encoders(args, device, dtype):
 
 
 @torch.no_grad()
-def encode_captions(captions, tokenizer, text_encoder, device, max_length):
-    """Tokenise and encode, building the mask from pad ids.
-
-    An all-pad row (the empty unconditional caption can produce one) makes the
-    attention softmax divide by zero, so its first position is forced visible.
-    """
+def encode_captions(captions, tokenizer, text_encoder, device, max_length,
+                    mode="fp32-eager"):
+    """Tokenise and encode. The two modes differ in mask and readout as well as
+    in dtype, so both halves have to match the path being reproduced."""
     tok = tokenizer(captions, padding="max_length", max_length=max_length,
                     truncation=True, return_tensors="pt").to(device)
+    if mode == "bf16-causal":
+        # eval_sana.py exactly: the tokenizer's own mask, and the last entry of
+        # hidden_states off the causal-LM head.
+        out = text_encoder(input_ids=tok.input_ids,
+                           attention_mask=tok.attention_mask,
+                           output_hidden_states=True, return_dict=True)
+        return out.hidden_states[-1], tok.attention_mask
     ids = tok.input_ids
     mask = (ids != tokenizer.pad_token_id).long()
+    # An all-pad row (the empty unconditional caption can produce one) makes the
+    # attention softmax divide by zero, so force its first position visible.
     empty = mask.sum(dim=1) == 0
     if empty.any():
         mask[empty, 0] = 1
@@ -377,6 +405,7 @@ def build_protocol(args) -> Dict[str, Any]:
         "max_caption_len": args.max_caption_len,
         "seed": args.seed,
         "dtype": args.dtype,
+        "text_encoder": args.text_encoder,
         "clip_model": "openai/clip-vit-base-patch16",
         "metric_backend": "torchmetrics (flowsat.evaluation.eval_common)",
     }
@@ -447,12 +476,14 @@ def run(args) -> None:
     clip_scorer = setup_clip_scorer(device=device)
     uncond_full, uncond_mask_full = encode_captions(
         [""] * args.batch_size, tokenizer, text_encoder, device,
-        args.max_caption_len)
+        args.max_caption_len, args.text_encoder)
     if not torch.isfinite(uncond_full).all():
-        sys.exit("[fatal] the text encoder produced NaN/Inf on the empty caption. "
-                 "Every image would decode to black and every metric below would "
-                 "be meaningless. This is the Gemma-2 half-precision soft-capping "
-                 "failure -- the encoder must be fp32 with eager attention.")
+        sys.exit(f"[fatal] the text encoder produced NaN/Inf on the empty "
+                 f"caption under --text_encoder {args.text_encoder}. Every image "
+                 f"would decode to black and every metric below would be "
+                 f"meaningless. This is the Gemma-2 half-precision soft-capping "
+                 f"failure; re-run with --text_encoder fp32-eager, which does "
+                 f"not take that path.")
 
     curve_at = parse_curve_at(args.curve_at, args.num_samples)
     curve: List[Dict[str, Any]] = []
@@ -474,7 +505,8 @@ def run(args) -> None:
             B = real_u8.shape[0]
 
             cond_h, cond_m = encode_captions(captions, tokenizer, text_encoder,
-                                             device, args.max_caption_len)
+                                             device, args.max_caption_len,
+                                             args.text_encoder)
             latents = sample_latents(model, cond_h, cond_m, uncond_full[:B],
                                      uncond_mask_full[:B], metadata, args,
                                      args.seed + bi, device, dtype, latent_shape)
@@ -607,6 +639,14 @@ def parse_args():
     proto.add_argument("--uncond_metadata", choices=["zero", "real"], default="zero",
                        help="what the unconditional CFG branch sees; 'zero' is "
                             "what the published numbers used")
+    proto.add_argument("--text_encoder", default="fp32-eager",
+                       choices=["fp32-eager", "bf16-causal"],
+                       help="how Gemma-2 is loaded and read out. 'bf16-causal' "
+                            "reproduces eval_sana.py, which is what the paper "
+                            "submission numbers were measured with; "
+                            "'fp32-eager' matches training and is the safer "
+                            "default. They give different numbers -- the choice "
+                            "is in the protocol hash.")
     proto.add_argument("--curve_at", default="",
                        help="also report every metric at these intermediate "
                             "sample counts, e.g. '5000,6000,7000,8000,9000', or "

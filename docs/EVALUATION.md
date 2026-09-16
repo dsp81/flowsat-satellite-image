@@ -137,6 +137,38 @@ sees, and the published runs used a zeroed metadata vector. Zero is not
 guides the text direction alone, which is what `generate.py` does. It is a
 different sampler, and the two cannot be mixed within a comparison.
 
+## Which text encoder
+
+Gemma-2 can be loaded two ways, and they give measurably different numbers. The
+choice is a flag, and it is part of the protocol hash:
+
+```bash
+--text_encoder bf16-causal   # what the paper submission used
+--text_encoder fp32-eager    # the default; matches training
+```
+
+| | `bf16-causal` | `fp32-eager` |
+|---|---|---|
+| class | `AutoModelForCausalLM` | `AutoModel` |
+| dtype | the run dtype (bf16) | float32 |
+| attention | library default | `eager` |
+| read-out | `hidden_states[-1]` | `last_hidden_state` |
+| mask | the tokenizer's | built from pad ids, all-pad rows guarded |
+
+**`bf16-causal` is what `eval_sana.py` did, so it is the path the reported
+numbers were measured on.** It is kept for exactly that reason: a published
+number nobody can reproduce is not much of a published number.
+
+`fp32-eager` is what training uses, and it is the default here because the other
+path is fragile. Gemma-2 soft-caps its attention logits; in half precision off
+the eager path that can overflow to NaN, and NaN conditioning decodes to a black
+image rather than raising, so the metrics get computed on black frames. Whether
+it happens depends on the transformers version and the GPU, which is why the run
+aborts on non-finite conditioning instead of reporting a number.
+
+If you are checking the published row, use `bf16-causal`. If you are measuring a
+new model, use the default and say so.
+
 ## Two things that will silently ruin a run
 
 **Black images.** Gemma-2 soft-caps its attention logits, and in half precision
