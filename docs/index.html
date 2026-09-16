@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<script>document.documentElement.className+=" js"</script>
+<script>
+(function(){var r=document.documentElement;r.className+=" js";
+ try{var t=localStorage.getItem("flowsat-theme");if(t)r.setAttribute("data-theme",t);}catch(e){}})();
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>FlowSat — Metadata-Conditioned Satellite Image Generation</title>
 <meta name="description" content="FlowSat: a flow-matching Diffusion Transformer that conditions satellite image generation on geometry-aware acquisition metadata. BMVC 2026.">
@@ -11,14 +14,35 @@
 <meta property="og:image" content="https://dsp81.github.io/flowsat-satellite-image/static/teaser.jpg">
 <meta property="og:url" content="https://dsp81.github.io/flowsat-satellite-image/">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0f12" media="(prefers-color-scheme: dark)">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
   --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
-  --acc:#0b6b57; --acc2:#12a37f; --accs:#e6f2ef; --max:1000px;
+  --acc:#0b6b57; --acc2:#12a37f; --accs:#e6f2ef; --accs2:#f3f9f7; --max:1000px;
   --disp:"Space Grotesk",Inter,-apple-system,sans-serif;
+  /* Surfaces that are white in the light theme and have to move in the dark
+     one. Components reference these, so the dark theme is a token swap. */
+  --panel:#fff; --nav-bg:rgba(255,255,255,.86); --float:rgba(255,255,255,.86);
+  --code-bg:#0f1216; --code-fg:#e9edf2;
+  --ph-a:#fafbfc; --ph-b:#f1f4f7; --ph-line:#c8ced6;
+  --btn-a:#0e8168; --btn-b:var(--acc); --btn-edge:#0a5f4e; --btn-fg:#fff;
+  --globe:#0b6b57; --hair:rgba(15,18,22,.10);
+  --page-grad:linear-gradient(180deg,#fdfefe 0%,#fff 32%,#fbfcfd 78%,#f7f9fb 100%);
+  --grain-blend:multiply; --grain-op:.028; --grat-filter:none; --grat-op:1;
+  --lead:#28303a; --code-edge:transparent; --halo:rgba(11,107,87,.30);
+  --stage-inset:inset 0 0 0 1px rgba(15,18,22,.05),inset 0 -40px 60px -50px rgba(15,18,22,.5);
+  --hero-grad:radial-gradient(48% 46% at 22% 8%,rgba(11,107,87,.10),transparent 62%),
+              radial-gradient(42% 40% at 82% 0%,rgba(11,107,87,.07),transparent 60%);
+  --mesh-grad:radial-gradient(34% 30% at 18% 14%,rgba(11,107,87,.11),transparent 62%),
+              radial-gradient(30% 26% at 84% 26%,rgba(20,96,140,.075),transparent 62%),
+              radial-gradient(36% 32% at 62% 82%,rgba(11,107,87,.07),transparent 62%),
+              radial-gradient(26% 24% at 12% 74%,rgba(20,96,140,.05),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.05) 42%,
+              rgba(255,255,255,.55) 50%,rgba(20,96,140,.045) 58%,transparent 100%);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; scroll-padding-top:64px}
@@ -26,7 +50,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-sys
 .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
 a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
 
-nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
 nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;display:flex;align-items:center;gap:8px}
 nav .brand::before{content:"";width:7px;height:7px;border-radius:50%;flex:none;
@@ -46,9 +70,9 @@ h1{font-size:clamp(38px,6vw,60px);line-height:1.05;font-weight:700;margin:20px 0
 .auth{font-size:17px;margin:0 0 5px}.auth a{color:var(--ink)}
 .aff{font-size:15px;color:var(--mut);margin:0 0 26px}
 .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:-.005em;background:linear-gradient(170deg,#0e8168,var(--acc));color:#fff;border:1px solid #0a5f4e;transition:.14s}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:10px;font-size:15px;font-weight:600;letter-spacing:-.005em;background:linear-gradient(170deg,var(--btn-a),var(--btn-b));color:var(--btn-fg);border:1px solid var(--btn-edge);transition:.14s}
 .btn:hover{text-decoration:none;opacity:.88;transform:translateY(-1px)}
-.btn.g{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.g{background:var(--panel);color:var(--ink);border-color:var(--line)}
 .btn.g:hover{border-color:var(--mut)}
 
 section{padding:56px 0;border-bottom:1px solid var(--line)}
@@ -58,13 +82,13 @@ h2{font-size:30px;font-weight:600;letter-spacing:-.022em;margin:0 0 10px}
 .kicker::before{content:"";width:22px;height:2px;border-radius:2px;flex:none;
   background:linear-gradient(90deg,var(--acc),var(--acc2))}
 h3{font-size:19.5px;font-weight:600;letter-spacing:-.012em;margin:30px 0 10px}
-p{margin:0 0 16px} .lead{font-size:19px;color:#28303a}
+p{margin:0 0 16px} .lead{font-size:19px;color:var(--lead)}
 
 figure{margin:0} img{max-width:100%;display:block}
 .frame{border-radius:12px;border:1px solid var(--line);overflow:hidden;background:var(--soft)}
 figcaption{font-size:14.5px;color:var(--mut);margin-top:11px;text-align:center}
-.ph{width:100%;aspect-ratio:16/6;border-radius:12px;border:1px dashed #c8ced6;
-  background:repeating-linear-gradient(45deg,#fafbfc,#fafbfc 12px,#f1f4f7 12px,#f1f4f7 24px);
+.ph{width:100%;aspect-ratio:16/6;border-radius:12px;border:1px dashed var(--ph-line);
+  background:repeating-linear-gradient(45deg,var(--ph-a),var(--ph-a) 12px,var(--ph-b) 12px,var(--ph-b) 24px);
   display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13.5px;font-family:"JetBrains Mono",monospace;text-align:center;padding:12px}
 
 .dial{display:grid;grid-template-columns:1.25fr .75fr;gap:28px;align-items:start;margin-top:26px}
@@ -75,18 +99,18 @@ figcaption{font-size:14.5px;color:var(--mut);margin-top:11px;text-align:center}
 .stage .ph{position:absolute;inset:0;aspect-ratio:auto;border:none;border-radius:0}
 .ctrl{background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:20px}
 .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
-.tab{flex:1;min-width:78px;padding:8px 10px;font-size:14px;font-weight:500;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--mut);cursor:pointer;transition:.14s}
+.tab{flex:1;min-width:78px;padding:8px 10px;font-size:14px;font-weight:500;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--mut);cursor:pointer;transition:.14s}
 .tab:hover{border-color:var(--mut);color:var(--ink)}
-.tab.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .rowlab{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
 .rowlab .k{font-size:13px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--mut)}
 .rowlab .v{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
 input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:5px;border-radius:99px;background:var(--line);outline:none;margin:10px 0 4px}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.22)}
-input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid #fff}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid var(--panel);box-shadow:0 1px 5px rgba(0,0,0,.22)}
+input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--acc);cursor:pointer;border:3px solid var(--panel)}
 .ticks{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);font-family:"JetBrains Mono",monospace}
 .fixed{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);font-size:13.5px;color:var(--mut);line-height:1.75}
-.fixed code{background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px}
+.fixed code{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12.5px}
 .hint{font-size:13.5px;color:var(--mut);margin-top:14px;font-style:italic}
 
 .cmp{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);aspect-ratio:2/1;cursor:ew-resize;user-select:none;background:var(--soft)}
@@ -100,7 +124,7 @@ input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;bac
 /* Flex, not grid: a trailing row that does not fill (five cards in threes)
    centres itself instead of hugging the left edge. */
 .grid{display:flex;flex-wrap:wrap;justify-content:center;gap:18px;margin:26px 0 6px}
-.card{flex:1 1 240px;background:var(--soft);border:1px solid var(--line);
+.card{flex:1 1 240px;background:var(--panel);border:1px solid var(--line);
   border-radius:14px;padding:21px;position:relative;overflow:hidden}
 @media(min-width:780px){
   .grid.cols-2>.card{flex:0 1 calc(50% - 9px)}
@@ -121,16 +145,73 @@ th{font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05e
 tr.ours{background:var(--accs)} tr.ours td{font-weight:600}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
 
-pre{background:#0f1216;color:#e9edf2;padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.62;margin:0 0 14px;position:relative}
+pre{background:var(--code-bg);color:var(--code-fg);border:1px solid var(--code-edge);padding:18px 20px;border-radius:11px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13.5px;line-height:1.62;margin:0 0 14px;position:relative}
 code{font-family:"JetBrains Mono",monospace;font-size:.9em}
 p code,li code,td code{background:var(--soft);padding:2px 6px;border-radius:5px;border:1px solid var(--line)}
 .copy{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.1);color:#cfd6de;border:1px solid rgba(255,255,255,.16);border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:Inter,sans-serif}
 .copy:hover{background:rgba(255,255,255,.18);color:#fff}
-.note{background:linear-gradient(120deg,var(--accs),#f3f9f7 70%);border-left:3px solid var(--acc);padding:16px 19px;border-radius:0 10px 10px 0;margin:20px 0;font-size:15.5px}
+.note{background:linear-gradient(120deg,var(--accs),var(--accs2) 70%);border-left:3px solid var(--acc);padding:16px 19px;border-radius:0 10px 10px 0;margin:20px 0;font-size:15.5px}
 footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
 .js .reveal{opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
 .js .reveal.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none;transition:none}}
+
+/* ---------- dark theme ---------------------------------------------------
+   Components read the surface tokens above, so the dark theme is mostly a
+   token swap. The values are duplicated across the two selectors because CSS
+   has no way to share one declaration block: the media query is the default,
+   and [data-theme] is the explicit choice the toggle stores.
+   Greens lighten considerably -- #0b6b57 on a dark panel fails contrast as
+   both text and border. */
+:root[data-theme="dark"]{
+  --ink:#e7edf2; --mut:#93a3b0; --line:#232c34; --bg:#0b0f12; --soft:#131a20;
+  --acc:#3cc9a3; --acc2:#6fe6c3; --accs:rgba(60,201,163,.13); --accs2:rgba(60,201,163,.05);
+  --panel:#151d24; --nav-bg:rgba(11,15,18,.82); --float:rgba(21,29,36,.86);
+  --code-bg:#070b0e; --code-fg:#dde5ec;
+  --ph-a:#111820; --ph-b:#161f27; --ph-line:#2c3a45;
+  --btn-a:#2ea888; --btn-b:#1c8a6e; --btn-edge:#35c6a0; --btn-fg:#04120d;
+  --globe:#2fa183; --hair:rgba(255,255,255,.12);
+  --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
+  --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
+  --lead:#c6d1db; --code-edge:#1d262d; --halo:rgba(60,201,163,.28);
+  --stage-inset:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 -40px 60px -50px rgba(0,0,0,.7);
+  --hero-grad:radial-gradient(48% 46% at 22% 8%,rgba(60,201,163,.13),transparent 62%),
+              radial-gradient(42% 40% at 82% 0%,rgba(35,120,165,.12),transparent 60%);
+  --mesh-grad:radial-gradient(34% 30% at 18% 14%,rgba(60,201,163,.10),transparent 62%),
+              radial-gradient(30% 26% at 84% 26%,rgba(52,140,190,.09),transparent 62%),
+              radial-gradient(36% 32% at 62% 82%,rgba(60,201,163,.07),transparent 62%),
+              radial-gradient(26% 24% at 12% 74%,rgba(52,140,190,.06),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(60,201,163,.05) 42%,
+              rgba(150,220,205,.10) 50%,rgba(52,140,190,.05) 58%,transparent 100%);
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#e7edf2; --mut:#93a3b0; --line:#232c34; --bg:#0b0f12; --soft:#131a20;
+  --acc:#3cc9a3; --acc2:#6fe6c3; --accs:rgba(60,201,163,.13); --accs2:rgba(60,201,163,.05);
+  --panel:#151d24; --nav-bg:rgba(11,15,18,.82); --float:rgba(21,29,36,.86);
+  --code-bg:#070b0e; --code-fg:#dde5ec;
+  --ph-a:#111820; --ph-b:#161f27; --ph-line:#2c3a45;
+  --btn-a:#2ea888; --btn-b:#1c8a6e; --btn-edge:#35c6a0; --btn-fg:#04120d;
+  --globe:#2fa183; --hair:rgba(255,255,255,.12);
+  --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
+  --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
+  --lead:#c6d1db; --code-edge:#1d262d; --halo:rgba(60,201,163,.28);
+  --stage-inset:inset 0 0 0 1px rgba(255,255,255,.07),inset 0 -40px 60px -50px rgba(0,0,0,.7);
+  --hero-grad:radial-gradient(48% 46% at 22% 8%,rgba(60,201,163,.13),transparent 62%),
+              radial-gradient(42% 40% at 82% 0%,rgba(35,120,165,.12),transparent 60%);
+  --mesh-grad:radial-gradient(34% 30% at 18% 14%,rgba(60,201,163,.10),transparent 62%),
+              radial-gradient(30% 26% at 84% 26%,rgba(52,140,190,.09),transparent 62%),
+              radial-gradient(36% 32% at 62% 82%,rgba(60,201,163,.07),transparent 62%),
+              radial-gradient(26% 24% at 12% 74%,rgba(52,140,190,.06),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(60,201,163,.05) 42%,
+              rgba(150,220,205,.10) 50%,rgba(52,140,190,.05) 58%,transparent 100%);}}
+
+/* The theme button sits in the nav and must not inherit the link underline. */
+.tbtn{background:none;border:1px solid var(--line);border-radius:8px;cursor:pointer;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  color:var(--acc);font-size:15px;line-height:1;padding:0;font-family:inherit;
+  transition:color .16s ease,border-color .16s ease,background .16s ease}
+.tbtn:hover{color:var(--ink);border-color:var(--mut);background:var(--soft)}
+
 /* ---------- polish: depth, motion, focus ---------------------------------- */
 #prog{position:fixed;top:0;left:0;height:2px;width:0;z-index:60;
   background:linear-gradient(90deg,var(--acc),var(--acc2));transition:width .08s linear}
@@ -147,16 +228,15 @@ nav .links a.act::after{transform:scaleX(1)}
 
 header{position:relative;overflow:hidden}
 header::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150%;
-  background:radial-gradient(48% 46% at 22% 8%,rgba(11,107,87,.10),transparent 62%),
-             radial-gradient(42% 40% at 82% 0%,rgba(11,107,87,.07),transparent 60%);
+  background:var(--hero-grad);
   animation:drift 22s ease-in-out infinite alternate;pointer-events:none;z-index:-1}
 @keyframes drift{from{transform:translate3d(-1.5%,0,0) scale(1)}
                  to{transform:translate3d(1.5%,2%,0) scale(1.06)}}
 .venue{position:relative}
 .venue::after{content:"";position:absolute;inset:0;border-radius:999px;
   box-shadow:0 0 0 0 rgba(11,107,87,.35);animation:halo 3.6s ease-out infinite}
-@keyframes halo{0%{box-shadow:0 0 0 0 rgba(11,107,87,.30)}
-                70%,100%{box-shadow:0 0 0 12px rgba(11,107,87,0)}}
+@keyframes halo{0%{box-shadow:0 0 0 0 var(--halo)}
+                70%,100%{box-shadow:0 0 0 12px transparent}}
 
 .btn{box-shadow:0 1px 2px rgba(15,18,22,.06)}
 .btn:hover{box-shadow:0 6px 18px rgba(15,18,22,.13)}
@@ -167,7 +247,7 @@ header::before{content:"";position:absolute;inset:-40% -20% auto -20%;height:150
 #teaser{will-change:transform}
 
 .card{transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease;
-  background:linear-gradient(180deg,#fff,var(--soft))}
+  background:linear-gradient(180deg,var(--panel),var(--soft))}
 .card::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;
   background:linear-gradient(90deg,var(--acc),var(--acc2));
   transform:scaleX(0);transform-origin:0 50%;transition:transform .3s ease}
@@ -185,7 +265,7 @@ td.n{font-variant-numeric:tabular-nums}
 .stage img.on{animation:breathe 15s ease-in-out infinite alternate}
 @keyframes breathe{from{transform:scale(1)}to{transform:scale(1.035)}}
 .stage::after{content:"";position:absolute;inset:0;pointer-events:none;
-  box-shadow:inset 0 0 0 1px rgba(15,18,22,.05),inset 0 -40px 60px -50px rgba(15,18,22,.5)}
+  box-shadow:var(--stage-inset)}
 input[type=range]::-webkit-slider-thumb{transition:transform .14s ease,box-shadow .14s ease}
 input[type=range]:hover::-webkit-slider-thumb{transform:scale(1.12)}
 input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
@@ -230,25 +310,19 @@ input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
 /* ---------- background: graticule, drift, satellite pass, grain ----------- */
 body{background:transparent}
 #bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
-  background:linear-gradient(180deg,#fdfefe 0%,#fff 32%,#fbfcfd 78%,#f7f9fb 100%)}
+  background:var(--page-grad)}
 #bg>div{position:absolute}
-#bg .mesh{inset:-30%;
-  background:
-    radial-gradient(34% 30% at 18% 14%,rgba(11,107,87,.11),transparent 62%),
-    radial-gradient(30% 26% at 84% 26%,rgba(20,96,140,.075),transparent 62%),
-    radial-gradient(36% 32% at 62% 82%,rgba(11,107,87,.07),transparent 62%),
-    radial-gradient(26% 24% at 12% 74%,rgba(20,96,140,.05),transparent 62%);
+#bg .mesh{inset:-30%;background:var(--mesh-grad);
   animation:meshdrift 46s ease-in-out infinite alternate}
 #bg .graticule{inset:-6%;background:url("static/grid.svg") repeat;
   background-size:520px 520px;animation:gridpan 120s linear infinite;
+  filter:var(--grat-filter);opacity:var(--grat-op);
   -webkit-mask-image:radial-gradient(78% 66% at 50% 30%,#000 30%,transparent 82%);
   mask-image:radial-gradient(78% 66% at 50% 30%,#000 30%,transparent 82%)}
 #bg .scan{top:-40%;left:-45%;width:55%;height:190%;transform:rotate(11deg);
-  background:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.05) 42%,
-    rgba(255,255,255,.55) 50%,rgba(20,96,140,.045) 58%,transparent 100%);
-  animation:pass 34s linear infinite}
+  background:var(--scan-grad);animation:pass 34s linear infinite}
 #bg .grain{inset:0;background:url("static/noise.svg") repeat;background-size:180px 180px;
-  opacity:.028;mix-blend-mode:multiply}
+  opacity:var(--grain-op);mix-blend-mode:var(--grain-blend)}
 @keyframes meshdrift{
   0%{transform:translate3d(-2%,-1%,0) scale(1)}
   50%{transform:translate3d(1.5%,1.5%,0) scale(1.06)}
@@ -274,14 +348,14 @@ section,header{background:transparent}
 /* ---------- player controls ------------------------------------------- */
 .play,.replay{position:absolute;z-index:3;display:flex;align-items:center;
   justify-content:center;border-radius:50%;cursor:pointer;
-  background:rgba(255,255,255,.86);color:var(--ink);border:1px solid rgba(15,18,22,.10);
+  background:var(--float);color:var(--ink);border:1px solid var(--hair);
   box-shadow:0 3px 14px -4px rgba(15,18,22,.4);backdrop-filter:blur(8px);
   transition:transform .16s ease,background .16s ease,opacity .2s ease}
 .play{left:12px;bottom:12px;width:40px;height:40px;font-size:13px;padding-left:2px}
 .replay{right:12px;top:12px;width:34px;height:34px;font-size:15px}
-.play:hover,.replay:hover{transform:scale(1.08);background:#fff}
+.play:hover,.replay:hover{transform:scale(1.08);background:var(--panel)}
 .play:active,.replay:active{transform:scale(.96)}
-.play.on{background:var(--ink);color:#fff;border-color:var(--ink);padding-left:0}
+.play.on{background:var(--ink);color:var(--bg);border-color:var(--ink);padding-left:0}
 .cmp .replay{opacity:0}
 .cmp:hover .replay,.replay:focus-visible{opacity:1}
 
@@ -308,11 +382,12 @@ section,header{background:transparent}
     <a href="#cite">Cite</a>
   </span>
   <a href="https://github.com/dsp81/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+  <button class="tbtn" id="theme" type="button" aria-label="Switch colour theme">&#9789;</button>
 </div></nav>
 
 <header>
 <svg class="globe" viewBox="0 0 400 400" aria-hidden="true">
-  <g fill="none" stroke="#0b6b57" stroke-width="1.1">
+  <g fill="none" stroke="var(--globe)" stroke-width="1.1">
     <circle cx="200" cy="200" r="150"/>
     <ellipse cx="200" cy="76.5" rx="75.0" ry="23.2"/>
     <ellipse cx="200" cy="128.7" rx="129.9" ry="40.1"/>
@@ -841,6 +916,27 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight'){ slider.value=Math.min(+slider.value+1,+slider.max); paint(); }
   if(e.key==='ArrowLeft'){ slider.value=Math.max(+slider.value-1,0); paint(); }
 });
+
+/* Colour theme. The OS preference is the default; the button overrides it and
+   the choice is remembered. Applied in <head> too, so there is no light flash
+   before this runs. */
+(()=>{
+  const root=document.documentElement, KEY='flowsat-theme',
+        btn=document.getElementById('theme'), mq=matchMedia('(prefers-color-scheme:dark)');
+  if(!btn) return;
+  const isDark=()=>{ const t=root.getAttribute('data-theme');
+                     return t ? t==='dark' : mq.matches; };
+  const sync=()=>{ const d=isDark();
+    btn.innerHTML = d ? '&#9788;' : '&#9789;';
+    btn.setAttribute('aria-label', d?'Switch to the light theme':'Switch to the dark theme');
+    btn.setAttribute('title', btn.getAttribute('aria-label')); };
+  btn.onclick=()=>{ const next=isDark()?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem(KEY,next)}catch(e){}
+    sync(); };
+  mq.addEventListener('change',sync);
+  sync();
+})();
 
 document.querySelectorAll('.copy').forEach(b=>{
   b.onclick=()=>{

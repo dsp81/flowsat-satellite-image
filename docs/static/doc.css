@@ -4,7 +4,54 @@
   --ink:#0f1216; --mut:#5d6773; --line:#e4e8ed; --bg:#fff; --soft:#f7f9fb;
   --acc:#0b6b57; --acc2:#12a37f; --accs:#e6f2ef; --max:1000px;
   --disp:"Space Grotesk",Inter,-apple-system,sans-serif;
+  --lead:#28303a; --panel:#fff; --nav-bg:rgba(255,255,255,.86);
+  --code-bg:#0f1216; --code-fg:#e9edf2; --code-edge:transparent;
+  --quote-bg:rgba(230,242,239,.86); --table-bg:rgba(255,255,255,.55);
+  --page-grad:linear-gradient(180deg,#fdfefe 0%,#fff 34%,#fbfcfd 80%,#f7f9fb 100%);
+  --mesh-grad:radial-gradient(32% 28% at 16% 10%,rgba(11,107,87,.10),transparent 62%),
+              radial-gradient(28% 24% at 86% 20%,rgba(20,96,140,.065),transparent 62%),
+              radial-gradient(34% 30% at 60% 86%,rgba(11,107,87,.055),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.04) 42%,
+              rgba(255,255,255,.5) 50%,rgba(20,96,140,.035) 58%,transparent 100%);
+  --grain-blend:multiply; --grain-op:.026; --grat-filter:none; --grat-op:1;
 }
+
+/* Dark theme. Mirrors index.html: the media query is the default and
+   [data-theme] is the explicit choice the nav button stores. */
+:root[data-theme="dark"]{
+  --ink:#e7edf2; --mut:#93a3b0; --line:#232c34; --bg:#0b0f12; --soft:#131a20;
+  --acc:#3cc9a3; --acc2:#6fe6c3; --accs:rgba(60,201,163,.13);
+  --lead:#c6d1db; --panel:#151d24; --nav-bg:rgba(11,15,18,.82);
+  --code-bg:#070b0e; --code-fg:#dde5ec; --code-edge:#1d262d;
+  --quote-bg:rgba(60,201,163,.10); --table-bg:rgba(21,29,36,.55);
+  --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
+  --mesh-grad:radial-gradient(32% 28% at 16% 10%,rgba(60,201,163,.10),transparent 62%),
+              radial-gradient(28% 24% at 86% 20%,rgba(52,140,190,.08),transparent 62%),
+              radial-gradient(34% 30% at 60% 86%,rgba(60,201,163,.06),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(60,201,163,.05) 42%,
+              rgba(150,220,205,.09) 50%,rgba(52,140,190,.05) 58%,transparent 100%);
+  --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ink:#e7edf2; --mut:#93a3b0; --line:#232c34; --bg:#0b0f12; --soft:#131a20;
+  --acc:#3cc9a3; --acc2:#6fe6c3; --accs:rgba(60,201,163,.13);
+  --lead:#c6d1db; --panel:#151d24; --nav-bg:rgba(11,15,18,.82);
+  --code-bg:#070b0e; --code-fg:#dde5ec; --code-edge:#1d262d;
+  --quote-bg:rgba(60,201,163,.10); --table-bg:rgba(21,29,36,.55);
+  --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
+  --mesh-grad:radial-gradient(32% 28% at 16% 10%,rgba(60,201,163,.10),transparent 62%),
+              radial-gradient(28% 24% at 86% 20%,rgba(52,140,190,.08),transparent 62%),
+              radial-gradient(34% 30% at 60% 86%,rgba(60,201,163,.06),transparent 62%);
+  --scan-grad:linear-gradient(96deg,transparent 0%,rgba(60,201,163,.05) 42%,
+              rgba(150,220,205,.09) 50%,rgba(52,140,190,.05) 58%,transparent 100%);
+  --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
+}}
+
+.tbtn{background:none;border:1px solid var(--line);border-radius:8px;cursor:pointer;
+  width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  color:var(--acc);font-size:15px;line-height:1;padding:0;font-family:inherit;
+  transition:color .16s ease,border-color .16s ease,background .16s ease}
+.tbtn:hover{color:var(--ink);border-color:var(--mut);background:var(--soft)}
 h1,h2,h3,h4,.kicker,nav .brand,.toc .t,article th{font-family:var(--disp)}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth; scroll-padding-top:76px}
@@ -14,7 +61,7 @@ body{margin:0;background:var(--bg);color:var(--ink);
 .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
 a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
 
-nav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.86);
+nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
 nav .wrap{display:flex;align-items:center;gap:26px;height:56px}
 nav .brand{font-weight:700;letter-spacing:-.02em;margin-right:auto;color:var(--ink);
@@ -56,7 +103,7 @@ article strong{font-weight:650}
 article hr{border:none;border-top:1px solid var(--line);margin:34px 0}
 article blockquote{margin:20px 0;padding:15px 19px;
   background:linear-gradient(120deg,var(--accs),#f3f9f7 70%);
-  border-left:3px solid var(--acc);border-radius:0 9px 9px 0;color:#28303a}
+  border-left:3px solid var(--acc);border-radius:0 9px 9px 0;color:var(--lead)}
 article blockquote p:last-child{margin:0}
 
 table{width:100%;border-collapse:collapse;font-size:15.5px;margin:18px 0 24px;
@@ -66,7 +113,7 @@ th,td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);
 th{font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;
   color:var(--mut);white-space:nowrap}
 
-pre{background:#0f1216;color:#e9edf2;padding:18px 20px;border-radius:11px;
+pre{background:var(--code-bg);color:var(--code-fg);border:1px solid var(--code-edge);padding:18px 20px;border-radius:11px;
   overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:13.5px;
   line-height:1.62;margin:0 0 18px}
 pre code{background:none;border:none;padding:0;color:inherit;font-size:inherit}
@@ -147,24 +194,19 @@ pre:hover .copy,.copy:focus-visible{opacity:1}
 /* ---------- background: graticule, drift, satellite pass, grain ----------- */
 body{background:transparent}
 #bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
-  background:linear-gradient(180deg,#fdfefe 0%,#fff 34%,#fbfcfd 80%,#f7f9fb 100%)}
+  background:var(--page-grad)}
 #bg>div{position:absolute}
-#bg .mesh{inset:-30%;
-  background:
-    radial-gradient(32% 28% at 16% 10%,rgba(11,107,87,.10),transparent 62%),
-    radial-gradient(28% 24% at 86% 20%,rgba(20,96,140,.065),transparent 62%),
-    radial-gradient(34% 30% at 60% 86%,rgba(11,107,87,.055),transparent 62%);
+#bg .mesh{inset:-30%;background:var(--mesh-grad);
   animation:meshdrift 46s ease-in-out infinite alternate}
 #bg .graticule{inset:-6%;background:url("static/grid.svg") repeat;
   background-size:520px 520px;animation:gridpan 120s linear infinite;
+  filter:var(--grat-filter);opacity:var(--grat-op);
   -webkit-mask-image:radial-gradient(76% 62% at 50% 26%,#000 30%,transparent 82%);
   mask-image:radial-gradient(76% 62% at 50% 26%,#000 30%,transparent 82%)}
 #bg .scan{top:-40%;left:-45%;width:55%;height:190%;transform:rotate(11deg);
-  background:linear-gradient(96deg,transparent 0%,rgba(11,107,87,.04) 42%,
-    rgba(255,255,255,.5) 50%,rgba(20,96,140,.035) 58%,transparent 100%);
-  animation:pass 40s linear infinite}
+  background:var(--scan-grad);animation:pass 40s linear infinite}
 #bg .grain{inset:0;background:url("static/noise.svg") repeat;background-size:180px 180px;
-  opacity:.026;mix-blend-mode:multiply}
+  opacity:var(--grain-op);mix-blend-mode:var(--grain-blend)}
 @keyframes meshdrift{
   0%{transform:translate3d(-2%,-1%,0) scale(1)}
   50%{transform:translate3d(1.5%,1.5%,0) scale(1.06)}
@@ -174,8 +216,8 @@ body{background:transparent}
                 92%{opacity:1}100%{left:125%;opacity:0}}
 
 header.doc,article,.toc{background:transparent}
-article blockquote{background:rgba(230,242,239,.86);backdrop-filter:blur(6px)}
-article table{background:rgba(255,255,255,.55);border-radius:10px}
+article blockquote{background:var(--quote-bg);backdrop-filter:blur(6px)}
+article table{background:var(--table-bg);border-radius:10px}
 
 @media(prefers-reduced-motion:reduce){
   #bg .mesh,#bg .graticule,#bg .scan{animation:none}

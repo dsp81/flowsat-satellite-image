@@ -71,7 +71,10 @@ SHELL = """<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="static/doc.css">
-<script>document.documentElement.className+=" js"</script>
+<script>
+(function(){{var r=document.documentElement;r.className+=" js";
+ try{{var t=localStorage.getItem("flowsat-theme");if(t)r.setAttribute("data-theme",t);}}catch(e){{}}}})();
+</script>
 </head>
 <body>
 <div id="prog"></div>
@@ -90,6 +93,7 @@ SHELL = """<!DOCTYPE html>
     <a href="./#limits">Limitations</a><a href="./#start">Get started</a>
   </span>
   <a href="{repo}" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
+  <button class="tbtn" id="theme" type="button" aria-label="Switch colour theme">&#9789;</button>
 </div></nav>
 
 <header class="doc"><div class="wrap">
@@ -157,6 +161,23 @@ const spy=new IntersectionObserver(es=>es.forEach(e=>{
   links.forEach(a=>a.classList.toggle('act',a.getAttribute('href')==='#'+e.target.id));
 }),{rootMargin:'-12% 0px -72% 0px'});
 document.querySelectorAll('article h2[id]').forEach(h=>spy.observe(h));
+
+/* colour theme: OS preference by default, button overrides, choice remembered */
+(()=>{
+  const root=document.documentElement, btn=document.getElementById('theme'),
+        mq=matchMedia('(prefers-color-scheme:dark)');
+  if(!btn) return;
+  const isDark=()=>{const t=root.getAttribute('data-theme');return t?t==='dark':mq.matches;};
+  const sync=()=>{const d=isDark();
+    btn.innerHTML=d?'&#9788;':'&#9789;';
+    btn.setAttribute('aria-label',d?'Switch to the light theme':'Switch to the dark theme');
+    btn.setAttribute('title',btn.getAttribute('aria-label'));};
+  btn.onclick=()=>{const next=isDark()?'light':'dark';
+    root.setAttribute('data-theme',next);
+    try{localStorage.setItem('flowsat-theme',next)}catch(e){}
+    sync();};
+  mq.addEventListener('change',sync); sync();
+})();
 
 /* copy button on every code block */
 document.querySelectorAll('article pre').forEach(pre=>{
