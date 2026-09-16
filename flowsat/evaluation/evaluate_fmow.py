@@ -226,12 +226,14 @@ def load_encoders(args, device, dtype):
         NaN conditioning decodes to a black image rather than raising.
 
     bf16-causal
-        AutoModelForCausalLM at the run dtype, default attention,
-        hidden_states[-1]. This is what eval_sana.py did, and therefore what the
-        **paper submission** numbers were measured with. Kept so those numbers
-        stay reproducible. On some transformers/GPU combinations it is the NaN
-        path above, which is why the run aborts on non-finite conditioning
-        instead of reporting metrics on black images.
+        AutoModelForCausalLM at the run dtype, eager attention,
+        hidden_states[-1], and the tokenizer's own mask. This is what
+        eval_sana.py did, and therefore what the **paper submission** numbers
+        were measured with. Kept so those numbers stay reproducible.
+
+        Measured on transformers 4.49: the only difference that remains against
+        fp32-eager is the dtype. AutoModel and AutoModelForCausalLM return
+        bit-identical hidden states, and hidden_states[-1] is last_hidden_state.
 
     Either way the conditioning is cast to the transformer's dtype at the
     boundary.
@@ -244,9 +246,14 @@ def load_encoders(args, device, dtype):
     if args.text_encoder == "bf16-causal":
         logger.info(f"loading Gemma-2 text encoder (AutoModelForCausalLM, "
                     f"{args.dtype}, default attention) -- the paper-submission path")
+        # eager is requested rather than left to the library. transformers
+        # used to default Gemma-2 to eager precisely because of the attention
+        # soft-capping; 4.49 defaults to sdpa, and sdpa + soft-capping in bf16
+        # returns 100% NaN here. The original run produced sane metrics, so it
+        # cannot have been on sdpa -- eager is what it effectively used.
         text_encoder = AutoModelForCausalLM.from_pretrained(
-            args.pretrained_sana, subfolder="text_encoder",
-            torch_dtype=dtype).to(device).eval()
+            args.pretrained_sana, subfolder="text_encoder", torch_dtype=dtype,
+            attn_implementation="eager").to(device).eval()
     else:
         logger.info("loading Gemma-2 text encoder (AutoModel, fp32, eager attention)")
         text_encoder = AutoModel.from_pretrained(
@@ -641,12 +648,12 @@ def parse_args():
                             "what the published numbers used")
     proto.add_argument("--text_encoder", default="fp32-eager",
                        choices=["fp32-eager", "bf16-causal"],
-                       help="how Gemma-2 is loaded and read out. 'bf16-causal' "
+                       help="Gemma-2 dtype and read-out. 'bf16-causal' "
                             "reproduces eval_sana.py, which is what the paper "
                             "submission numbers were measured with; "
-                            "'fp32-eager' matches training and is the safer "
-                            "default. They give different numbers -- the choice "
-                            "is in the protocol hash.")
+                            "'fp32-eager' matches training and is the default. "
+                            "Both request eager attention -- sdpa returns NaN "
+                            "on this model. The choice is in the protocol hash.")
     proto.add_argument("--curve_at", default="",
                        help="also report every metric at these intermediate "
                             "sample counts, e.g. '5000,6000,7000,8000,9000', or "

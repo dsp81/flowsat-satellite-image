@@ -272,7 +272,7 @@
       </tr>
       <tr>
       <td>attention</td>
-      <td>library default</td>
+      <td><code>eager</code></td>
       <td><code>eager</code></td>
       </tr>
       <tr>
@@ -287,15 +287,52 @@
       </tr>
       </tbody>
       </table>
+      <p>Measured on transformers 4.49, three of those five rows turn out not to matter:
+      <code>AutoModel</code> and <code>AutoModelForCausalLM</code> return <strong>bit-identical</strong> hidden states
+      (max difference 0.0), <code>hidden_states[-1]</code> <em>is</em> <code>last_hidden_state</code>, and with
+      <code>padding="max_length"</code> the two masks agree except on an all-pad row. <strong>The only
+      difference that actually moves the numbers is the dtype.</strong></p>
       <p><strong><code>bf16-causal</code> is what <code>eval_sana.py</code> did, so it is the path the reported
       numbers were measured on.</strong> It is kept for exactly that reason: a published
       number nobody can reproduce is not much of a published number.</p>
-      <p><code>fp32-eager</code> is what training uses, and it is the default here because the other
-      path is fragile. Gemma-2 soft-caps its attention logits; in half precision off
-      the eager path that can overflow to NaN, and NaN conditioning decodes to a black
-      image rather than raising, so the metrics get computed on black frames. Whether
-      it happens depends on the transformers version and the GPU, which is why the run
-      aborts on non-finite conditioning instead of reporting a number.</p>
+      <p>Both paths request eager attention explicitly, and that is load-bearing.
+      Gemma-2 soft-caps its attention logits, and <strong>sdpa + soft-capping in bf16
+      returns 100% NaN</strong> on this model — NaN conditioning decodes to a black image
+      rather than raising, so the metrics would be computed on black frames. Older
+      transformers defaulted Gemma-2 to eager for exactly this reason; 4.49 defaults
+      to sdpa. The original run produced sane metrics, so it cannot have been on sdpa.
+      Leaving the attention implementation to the library is what broke, not the
+      choice of head or dtype.</p>
+      <p>Measured directly, at 256 tokens on an A100:</p>
+      <table>
+      <thead>
+      <tr>
+      <th>load</th>
+      <th>result</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr>
+      <td><code>AutoModelForCausalLM</code>, bf16, <strong>sdpa</strong> (the 4.49 default)</td>
+      <td><strong>all NaN</strong></td>
+      </tr>
+      <tr>
+      <td><code>AutoModelForCausalLM</code>, bf16, eager</td>
+      <td>finite, absmax 75.5, std 3.947</td>
+      </tr>
+      <tr>
+      <td><code>AutoModelForCausalLM</code>, fp32, eager</td>
+      <td>finite, absmax 75.7, std 3.944</td>
+      </tr>
+      <tr>
+      <td><code>AutoModel</code>, fp32, eager</td>
+      <td>identical to the row above</td>
+      </tr>
+      </tbody>
+      </table>
+      <p><code>fp32-eager</code> is the default because it matches training and avoids half
+      precision in a model that soft-caps. The run aborts on non-finite conditioning
+      either way rather than reporting a number measured on black images.</p>
       <p>If you are checking the published row, use <code>bf16-causal</code>. If you are measuring a
       new model, use the default and say so.</p>
       <h2 id="two-things-that-will-silently-ruin-a-run">Two things that will silently ruin a run</h2>

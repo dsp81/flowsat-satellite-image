@@ -151,20 +151,41 @@ choice is a flag, and it is part of the protocol hash:
 |---|---|---|
 | class | `AutoModelForCausalLM` | `AutoModel` |
 | dtype | the run dtype (bf16) | float32 |
-| attention | library default | `eager` |
+| attention | `eager` | `eager` |
 | read-out | `hidden_states[-1]` | `last_hidden_state` |
 | mask | the tokenizer's | built from pad ids, all-pad rows guarded |
+
+Measured on transformers 4.49, three of those five rows turn out not to matter:
+`AutoModel` and `AutoModelForCausalLM` return **bit-identical** hidden states
+(max difference 0.0), `hidden_states[-1]` *is* `last_hidden_state`, and with
+`padding="max_length"` the two masks agree except on an all-pad row. **The only
+difference that actually moves the numbers is the dtype.**
 
 **`bf16-causal` is what `eval_sana.py` did, so it is the path the reported
 numbers were measured on.** It is kept for exactly that reason: a published
 number nobody can reproduce is not much of a published number.
 
-`fp32-eager` is what training uses, and it is the default here because the other
-path is fragile. Gemma-2 soft-caps its attention logits; in half precision off
-the eager path that can overflow to NaN, and NaN conditioning decodes to a black
-image rather than raising, so the metrics get computed on black frames. Whether
-it happens depends on the transformers version and the GPU, which is why the run
-aborts on non-finite conditioning instead of reporting a number.
+Both paths request eager attention explicitly, and that is load-bearing.
+Gemma-2 soft-caps its attention logits, and **sdpa + soft-capping in bf16
+returns 100% NaN** on this model — NaN conditioning decodes to a black image
+rather than raising, so the metrics would be computed on black frames. Older
+transformers defaulted Gemma-2 to eager for exactly this reason; 4.49 defaults
+to sdpa. The original run produced sane metrics, so it cannot have been on sdpa.
+Leaving the attention implementation to the library is what broke, not the
+choice of head or dtype.
+
+Measured directly, at 256 tokens on an A100:
+
+| load | result |
+|---|---|
+| `AutoModelForCausalLM`, bf16, **sdpa** (the 4.49 default) | **all NaN** |
+| `AutoModelForCausalLM`, bf16, eager | finite, absmax 75.5, std 3.947 |
+| `AutoModelForCausalLM`, fp32, eager | finite, absmax 75.7, std 3.944 |
+| `AutoModel`, fp32, eager | identical to the row above |
+
+`fp32-eager` is the default because it matches training and avoids half
+precision in a model that soft-caps. The run aborts on non-finite conditioning
+either way rather than reporting a number measured on black images.
 
 If you are checking the published row, use `bf16-causal`. If you are measuring a
 new model, use the default and say so.
