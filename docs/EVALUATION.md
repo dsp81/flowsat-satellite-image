@@ -192,7 +192,8 @@ repo id:
 
 The checkpoint is 2.3 GiB, which is past every GitHub limit (100 MB per git
 file, 2 GiB per release asset, 1 GB on the free LFS tier), so the Hub is where
-it lives. `tools/publish_weights.py` is what puts it there: it verifies the
+it will live; the upload happens with the weights release, and until then only
+a local path works. `tools/publish_weights.py` is what puts it there: it verifies the
 state dict is a complete FlowSat checkpoint before uploading anything, records
 the sha256, and renders the model card.
 

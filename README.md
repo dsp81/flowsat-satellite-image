@@ -182,8 +182,10 @@ flowsat-satellite-image/
 ## Pretrained weights
 
 The checkpoint is 2.3 GiB, past every GitHub limit, so it is distributed through
-the Hugging Face Hub. Both entry points take a repo id wherever they take a path,
-and download once into the usual cache:
+the Hugging Face Hub rather than this repository. **The upload is not live yet**
+— it goes up with the weights release described in **Status** above, at
+`dsp81/flowsat-fmow-512`. Once it is there, both entry points take the repo id
+wherever they take a path and download once into the usual cache:
 
 ```bash
 python generate.py --ckpt dsp81/flowsat-fmow-512 --prompt "..."
