@@ -366,6 +366,10 @@ def build_protocol(args) -> Dict[str, Any]:
         "fmow_test_root": str(args.fmow_test_root),
         "caption_root": str(args.caption_root),
         "num_samples": args.num_samples,
+        # Noise is seeded per batch (args.seed + batch index), so the batch size
+        # decides which noise each sample gets. It changes the images, therefore
+        # the metrics, and so it belongs in the hash.
+        "batch_size": args.batch_size,
         "resolution": args.resolution,
         "num_steps": args.num_steps,
         "guidance_scale": args.guidance_scale,
