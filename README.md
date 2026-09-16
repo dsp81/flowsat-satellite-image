@@ -97,6 +97,11 @@ python -m flowsat.evaluation.evaluate_fmow \
 one A100. It writes `metrics.json` with the protocol it ran under and a hash of
 it, and prints the measured numbers beside the published ones.
 
+Add `--curve_at 5000,6000,7000,8000,9000` to read every metric at intermediate
+sample counts as well. The points come from the same generation pass, so the
+whole FID-vs-N curve costs nothing extra — useful because FID is biased upward
+at small N and a number quoted without its N cannot be compared to anything.
+
 **→ [`docs/EVALUATION.md`](docs/EVALUATION.md)** explains what each metric
 measures here, what has to match before two runs can be compared at all, and the
 two failure modes that silently produce a plausible-looking but meaningless
@@ -173,6 +178,21 @@ flowsat-satellite-image/
     ├── METADATA_CONTROLLABILITY.md
     └── index.html           # project page
 ```
+
+## Pretrained weights
+
+The checkpoint is 2.3 GiB, past every GitHub limit, so it is distributed through
+the Hugging Face Hub. Both entry points take a repo id wherever they take a path,
+and download once into the usual cache:
+
+```bash
+python generate.py --ckpt dsp81/flowsat-fmow-512 --prompt "..."
+python -m flowsat.evaluation.evaluate_fmow --checkpoint dsp81/flowsat-fmow-512 ...
+```
+
+`tools/publish_weights.py` is what uploads them: it checks that the state dict
+is a complete FlowSat checkpoint before sending anything, records the sha256 and
+renders the model card.
 
 ## Using FlowSat on your own dataset
 

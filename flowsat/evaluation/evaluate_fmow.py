@@ -78,6 +78,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
+from flowsat.checkpoint import resolve_checkpoint
 from flowsat.evaluation.eval_common import (
     TestSample, compute_final_metrics, extract_metadata_vector,
     load_test_samples, pil_to_uint8_tensor, read_real_image, setup_clip_scorer,
@@ -182,14 +183,7 @@ def load_model(args, device, dtype):
         model.set_metadata_encoder(
             SatCLIPMetadataEncoder(embed_dim=model.embed_dim, num_metadata=7))
 
-    ckpt = Path(args.checkpoint)
-    weights = next((ckpt / n for n in ("model_0.pt", "model.pt", "model.safetensors",
-                                       "pytorch_model.bin")
-                    if (ckpt / n).exists()), ckpt if ckpt.is_file() else None)
-    if weights is None:
-        raise FileNotFoundError(
-            f"no weight file in {ckpt}: {sorted(p.name for p in ckpt.iterdir())[:15]}")
-
+    weights = resolve_checkpoint(args.checkpoint)
     logger.info(f"loading weights from {weights}")
     if weights.suffix == ".safetensors":
         from safetensors.torch import load_file
@@ -321,6 +315,43 @@ def decode_latents(vae, latents) -> torch.Tensor:
 
 
 # ---------------------------------------------------------------------------
+# Sample-count curve
+# ---------------------------------------------------------------------------
+
+def snapshot_metrics(metrics, clip_scorer, n_scored: int) -> Dict[str, Any]:
+    """Read every metric at the current sample count without disturbing it.
+
+    torchmetrics accumulates state and `compute()` does not reset it, so this
+    can be called mid-run as often as wanted; the next `update()` invalidates
+    the cached value. That makes the whole FID-vs-N curve fall out of a single
+    generation pass instead of one full run per point -- which matters, because
+    generating is hours and reading the metrics is seconds.
+    """
+    is_mean, is_std = metrics["is"].compute()
+    return {
+        "num_scored": n_scored,
+        "fid": float(metrics["fid"].compute()),
+        "clip_score": float(np.mean(clip_scorer.scores)) if clip_scorer.scores else float("nan"),
+        "ssim": float(metrics["ssim"].compute()),
+        "lpips": float(metrics["lpips"].compute()),
+        "is_mean": float(is_mean),
+        "is_std": float(is_std),
+    }
+
+
+def parse_curve_at(spec: str, num_samples: int) -> List[int]:
+    """"5000,6000,...' or 'auto' -> the sample counts to report at."""
+    if not spec:
+        return []
+    if spec == "auto":
+        step = max(1000, num_samples // 10)
+        pts = list(range(step, num_samples, step))
+    else:
+        pts = [int(x) for x in spec.replace(" ", "").split(",") if x]
+    return sorted({p for p in pts if 0 < p < num_samples})
+
+
+# ---------------------------------------------------------------------------
 # Protocol
 # ---------------------------------------------------------------------------
 
@@ -419,6 +450,11 @@ def run(args) -> None:
                  "be meaningless. This is the Gemma-2 half-precision soft-capping "
                  "failure -- the encoder must be fp32 with eager attention.")
 
+    curve_at = parse_curve_at(args.curve_at, args.num_samples)
+    curve: List[Dict[str, Any]] = []
+    if curve_at:
+        logger.info(f"will also report metrics at N = {curve_at}")
+
     n_done = n_dropped = 0
     t0 = time.time()
     with open(out_root / "progress.log", "a") as prog:
@@ -462,6 +498,13 @@ def run(args) -> None:
                     pil.save(d / f"{stem}.png")
 
             n_done += B
+            while curve_at and n_done >= curve_at[0]:
+                point = snapshot_metrics(metrics, clip_scorer, n_done)
+                point["requested_at"] = curve_at.pop(0)
+                curve.append(point)
+                logger.info(f"[curve] N={point['num_scored']:,}  "
+                            f"FID {point['fid']:.2f}  CLIP {point['clip_score']:.2f}  "
+                            f"SSIM {point['ssim']:.4f}  LPIPS {point['lpips']:.4f}")
             if bi % 5 == 0:
                 elapsed = time.time() - t0
                 rate = n_done / max(elapsed, 1e-6)
@@ -496,6 +539,14 @@ def run(args) -> None:
                            "for every model scored this way.",
         },
     }
+    if curve:
+        curve.append({**final, "num_scored": n_done, "requested_at": args.num_samples})
+        results["curve"] = curve
+        results["notes"]["curve"] = (
+            "Every point comes from one generation pass, read at increasing "
+            "sample counts. FID is biased upward at small N, so the curve falls "
+            "as N grows and a number measured at one N is not comparable to a "
+            "number measured at another.")
     (out_root / "metrics.json").write_text(json.dumps(results, indent=2))
     logger.info(f"wrote {out_root / 'metrics.json'}")
 
@@ -505,6 +556,15 @@ def run(args) -> None:
                               ("ssim", "SSIM", 1.0), ("lpips", "LPIPS", 1.0),
                               ("is_mean", "IS", 1.0)):
         print(f"  {label:12s}{final[key] * scale:12.4f}{PUBLISHED[key]:12.4f}")
+    if curve:
+        print(f"\n=== FID vs SAMPLE COUNT (one generation pass) ===")
+        print(f"  {'N':>8s}{'FID':>10s}{'CLIP':>9s}{'SSIM':>9s}{'LPIPS':>9s}")
+        for pt in curve:
+            print(f"  {pt['num_scored']:8,d}{pt['fid']:10.2f}{pt['clip_score']:9.2f}"
+                  f"{pt['ssim']:9.4f}{pt['lpips']:9.4f}")
+        print("  FID is biased upward at small N, so this curve falls as N grows. "
+              "Two FIDs\n  measured at different N are not comparable.")
+
     print(f"\n  CLIP in the paper's units: {final['clip_score'] / 100:.4f}")
     print(f"  Paired-metric floor (real vs real): "
           f"SSIM {REAL_VS_REAL['ssim']:.4f}, LPIPS {REAL_VS_REAL['lpips']:.4f}")
@@ -519,7 +579,8 @@ def parse_args():
 
     paths = p.add_argument_group("paths")
     paths.add_argument("--checkpoint", required=True,
-                       help="FlowSat checkpoint directory (contains model_0.pt)")
+                       help="checkpoint directory, weight file, or Hugging Face "
+                            "repo id (e.g. dsp81/flowsat-fmow-512)")
     paths.add_argument("--pretrained_sana",
                        default="Efficient-Large-Model/Sana_600M_512px_diffusers",
                        help="Sana snapshot providing the VAE, tokenizer and text encoder")
@@ -542,6 +603,13 @@ def parse_args():
     proto.add_argument("--uncond_metadata", choices=["zero", "real"], default="zero",
                        help="what the unconditional CFG branch sees; 'zero' is "
                             "what the published numbers used")
+    proto.add_argument("--curve_at", default="",
+                       help="also report every metric at these intermediate "
+                            "sample counts, e.g. '5000,6000,7000,8000,9000', or "
+                            "'auto' for ten evenly spaced points. Costs one "
+                            "metric read each, not a second generation pass. "
+                            "Does not enter the protocol hash -- it only adds "
+                            "readings of the same run.")
     proto.add_argument("--max_caption_len", type=int, default=256)
     proto.add_argument("--resolution", type=int, default=512)
     proto.add_argument("--seed", type=int, default=42)

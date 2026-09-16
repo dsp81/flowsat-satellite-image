@@ -210,6 +210,29 @@
       between two halves of a <em>single identical pool</em> measures 189 at N = 66. Small-N
       runs are useful for ranking checkpoints against each other and for nothing else.
       The script warns when <code>--num_samples</code> is below 10,000.</p>
+      <p>You can see that dependence directly. <code>--curve_at</code> reads every metric at
+      intermediate sample counts during a single generation pass:</p>
+      <pre><code class="language-bash">python -m flowsat.evaluation.evaluate_fmow ... \
+          --num_samples 10000 --curve_at 5000,6000,7000,8000,9000
+      </code></pre>
+      <p>Each point costs one metric read, not another pass — the metrics accumulate
+      state and reading them does not disturb it, so the whole curve falls out of the
+      run that produces the headline number. The curve lands in <code>metrics.json</code> under
+      <code>curve</code>, and the shape to expect is FID <em>falling</em> as N grows, because the bias
+      is upward at small N. That is worth internalising before comparing against a
+      published FID measured at an unstated N: a lower number is not automatically a
+      better model.</p>
+      <h3>If you are trying to match a number that is not on this page</h3>
+      <p>Two protocols exist in this project's history and they produce very different
+      FIDs for the same weights. This page describes the <strong>FMoW test split</strong>
+      evaluation, which is what the paper's headline row reports. Earlier ablation
+      runs (labelled A1–A7 in the working notes) instead scored against a
+      <strong>category-stratified subset of <code>fmow/train</code></strong>, built deterministically with
+      <code>seed=42</code> and <code>N=10000</code>. That is a different reference distribution, and a
+      number from it cannot be compared with a number from this one — the gap between
+      the two is larger than the gap between models. If a figure you are trying to
+      reproduce does not come out, check which reference set it came from before
+      changing anything else.</p>
       <p><code>uncond_metadata</code> is the one field where the published setting is arguably not
       the best one. It controls what the unconditional classifier-free-guidance branch
       sees, and the published runs used a zeroed metadata vector. Zero is not
@@ -252,6 +275,18 @@
       <p>The sample list is cached under <code>~/.cache/flowsat/</code> because enumerating the
       split is slow on network storage. Set <code>FLOWSAT_NO_SAMPLE_CACHE=1</code> to force a
       rescan after adding or removing captions.</p>
+      <h2 id="getting-the-weights">Getting the weights</h2>
+      <p><code>--checkpoint</code> takes a local directory, a local weight file, or a Hugging Face
+      repo id:</p>
+      <pre><code class="language-bash">--checkpoint dsp81/flowsat-fmow-512        # downloads once into the HF cache
+      --checkpoint dsp81/flowsat-fmow-512@v1.0   # a specific revision
+      --checkpoint checkpoints/flowsat-fmow-512  # a local directory
+      </code></pre>
+      <p>The checkpoint is 2.3 GiB, which is past every GitHub limit (100 MB per git
+      file, 2 GiB per release asset, 1 GB on the free LFS tier), so the Hub is where
+      it lives. <code>tools/publish_weights.py</code> is what puts it there: it verifies the
+      state dict is a complete FlowSat checkpoint before uploading anything, records
+      the sha256, and renders the model card.</p>
       <h2 id="evaluating-a-different-model">Evaluating a different model</h2>
       <p><code>flowsat/evaluation/eval_common.py</code> holds everything that decides what a number
       means: sample discovery and ordering, the image preprocessing path, and the
@@ -271,6 +306,7 @@
       <a href="#what-makes-two-runs-comparable">What makes two runs comparable</a>
       <a href="#two-things-that-will-silently-ruin-a-run">Two things that will silently ruin a run</a>
       <a href="#notes-on-the-test-split">Notes on the test split</a>
+      <a href="#getting-the-weights">Getting the weights</a>
       <a href="#evaluating-a-different-model">Evaluating a different model</a>
     </aside>
   </div>

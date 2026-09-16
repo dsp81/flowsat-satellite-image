@@ -100,6 +100,35 @@ between two halves of a *single identical pool* measures 189 at N = 66. Small-N
 runs are useful for ranking checkpoints against each other and for nothing else.
 The script warns when `--num_samples` is below 10,000.
 
+You can see that dependence directly. `--curve_at` reads every metric at
+intermediate sample counts during a single generation pass:
+
+```bash
+python -m flowsat.evaluation.evaluate_fmow ... \
+    --num_samples 10000 --curve_at 5000,6000,7000,8000,9000
+```
+
+Each point costs one metric read, not another pass — the metrics accumulate
+state and reading them does not disturb it, so the whole curve falls out of the
+run that produces the headline number. The curve lands in `metrics.json` under
+`curve`, and the shape to expect is FID *falling* as N grows, because the bias
+is upward at small N. That is worth internalising before comparing against a
+published FID measured at an unstated N: a lower number is not automatically a
+better model.
+
+### If you are trying to match a number that is not on this page
+
+Two protocols exist in this project's history and they produce very different
+FIDs for the same weights. This page describes the **FMoW test split**
+evaluation, which is what the paper's headline row reports. Earlier ablation
+runs (labelled A1–A7 in the working notes) instead scored against a
+**category-stratified subset of `fmow/train`**, built deterministically with
+`seed=42` and `N=10000`. That is a different reference distribution, and a
+number from it cannot be compared with a number from this one — the gap between
+the two is larger than the gap between models. If a figure you are trying to
+reproduce does not come out, check which reference set it came from before
+changing anything else.
+
 `uncond_metadata` is the one field where the published setting is arguably not
 the best one. It controls what the unconditional classifier-free-guidance branch
 sees, and the published runs used a zeroed metadata vector. Zero is not
@@ -149,6 +178,23 @@ rather than failing on them — a corrupt file should not end a two-hour run.
 The sample list is cached under `~/.cache/flowsat/` because enumerating the
 split is slow on network storage. Set `FLOWSAT_NO_SAMPLE_CACHE=1` to force a
 rescan after adding or removing captions.
+
+## Getting the weights
+
+`--checkpoint` takes a local directory, a local weight file, or a Hugging Face
+repo id:
+
+```bash
+--checkpoint dsp81/flowsat-fmow-512        # downloads once into the HF cache
+--checkpoint dsp81/flowsat-fmow-512@v1.0   # a specific revision
+--checkpoint checkpoints/flowsat-fmow-512  # a local directory
+```
+
+The checkpoint is 2.3 GiB, which is past every GitHub limit (100 MB per git
+file, 2 GiB per release asset, 1 GB on the free LFS tier), so the Hub is where
+it lives. `tools/publish_weights.py` is what puts it there: it verifies the
+state dict is a complete FlowSat checkpoint before uploading anything, records
+the sha256, and renders the model card.
 
 ## Evaluating a different model
 

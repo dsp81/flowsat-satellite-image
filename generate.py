@@ -121,13 +121,13 @@ def load_model(ckpt, pretrained, device, dtype, use_satclip=True):
             SatCLIPMetadataEncoder(embed_dim=model.embed_dim, num_metadata=7))
 
     print(f"[3/3] loading weights            ({ckpt})")
-    ck = Path(ckpt)
-    wf = next((ck / n for n in ("model_0.pt", "model.pt", "pytorch_model.bin",
-                                "diffusion_pytorch_model.bin")
-               if (ck / n).exists()), ck if ck.is_file() else None)
-    if wf is None:
-        sys.exit(f"[error] no weight file found in {ck}")
-    sd = torch.load(wf, map_location="cpu", weights_only=True)
+    from flowsat.checkpoint import resolve_checkpoint
+    wf = resolve_checkpoint(ckpt)
+    if wf.suffix == ".safetensors":
+        from safetensors.torch import load_file
+        sd = load_file(str(wf))
+    else:
+        sd = torch.load(wf, map_location="cpu", weights_only=True)
     sd = sd.get("state_dict", sd)
     sd = {k[7:] if k.startswith("module.") else k: v for k, v in sd.items()}
     missing, unexpected = model.load_state_dict(sd, strict=False)
@@ -211,7 +211,8 @@ def main():
     p.add_argument("--prompt", required=True, help="text description of the scene")
     p.add_argument("--out", default="output.png")
     p.add_argument("--ckpt", default="checkpoints/flowsat-fmow-512",
-                   help="FlowSat checkpoint directory")
+                   help="checkpoint directory, weight file, or Hugging Face "
+                        "repo id (e.g. dsp81/flowsat-fmow-512)")
     p.add_argument("--pretrained",
                    default="Efficient-Large-Model/Sana_600M_512px_diffusers",
                    help="Sana snapshot providing the VAE, tokenizer and text encoder")
