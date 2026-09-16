@@ -55,8 +55,17 @@ train = [
     "bitsandbytes>=0.41",
     "wandb>=0.16",
 ]
+# flowsat/evaluation: FID, Inception Score, LPIPS and SSIM come from torchmetrics,
+# whose FID/IS feature extractor needs torch-fidelity and scipy. The CLIP scorer
+# uses transformers, already a core dependency. Install "[eval,data]" together --
+# rasterio is what reads FMoW's 16-bit GeoTIFFs correctly.
+eval = [
+    "torchmetrics>=1.0",
+    "torch-fidelity>=0.3",
+    "scipy>=1.10",
+]
 all = [
-    "flowsat[data,train]",
+    "flowsat[data,train,eval]",
 ]
 
 [project.urls]

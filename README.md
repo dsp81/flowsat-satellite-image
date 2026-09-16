@@ -9,6 +9,7 @@
 [**Project Page**](https://dsp81.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
 [**Paper**](https://dsp81.github.io/flowsat-satellite-image/) &nbsp;|&nbsp;
 [**Quick Start**](#quick-start) &nbsp;|&nbsp;
+[**Reproduce the Results**](docs/EVALUATION.md) &nbsp;|&nbsp;
 [**Use on Your Own Dataset**](docs/NEW_DATASET.md) &nbsp;|&nbsp;
 [**Captioning**](docs/CAPTIONING.md)
 
@@ -67,9 +68,39 @@ On FMoW-RGB (512 px):
 
 Three-seed variance: FID 31.53 ± 0.32, CLIP 0.3018 ± 0.0007.
 
+FlowSat's paired reconstruction metrics on the same run: **SSIM 0.1600**,
+**LPIPS 0.6853**. These score each generated image against the one real image
+whose caption and metadata produced it, so they measure conditioning fidelity
+rather than image quality — two *real* FMoW acquisitions of the same place score
+SSIM 0.214 / LPIPS 0.425 through this pipeline, which is the ceiling, not 1.0.
+
 > The step-count advantage derives from flow matching and the DC-AE/Sana
 > backbone rather than from metadata conditioning; the metadata encoder's
 > contribution is measured separately in the encoder ablation (see paper §5.3).
+
+### Reproducing these numbers
+
+All four metrics come from one script, whose defaults are the published protocol:
+
+```bash
+pip install -e ".[eval,data]"
+
+python -m flowsat.evaluation.evaluate_fmow \
+    --checkpoint      checkpoints/flowsat-fmow-512 \
+    --pretrained_sana Efficient-Large-Model/Sana_600M_512px_diffusers \
+    --fmow_test_root  /path/to/fmow-full/test \
+    --caption_root    /path/to/fmow_captions_test \
+    --output_dir      evaluations/flowsat-125k
+```
+
+10,000 test samples, 20 Euler steps, guidance 2.5, seed 42 — roughly 2¼ hours on
+one A100. It writes `metrics.json` with the protocol it ran under and a hash of
+it, and prints the measured numbers beside the published ones.
+
+**→ [`docs/EVALUATION.md`](docs/EVALUATION.md)** explains what each metric
+measures here, what has to match before two runs can be compared at all, and the
+two failure modes that silently produce a plausible-looking but meaningless
+number.
 
 ## Architecture
 
@@ -88,22 +119,22 @@ Three-seed variance: FID 31.53 ± 0.32, CLIP 0.3018 ± 0.0007.
 
 ## Quick start
 
-> Code release in progress. The commands below reflect the intended public
-> interface and will work against the released package.
+> The package installs and runs today; pretrained weights are still being
+> prepared for release (see **Status** above).
 
 ```bash
 git clone https://github.com/dsp81/flowsat-satellite-image.git
 cd flowsat-satellite-image
-conda env create -f environment.yml && conda activate flowsat
+pip install -e .
 ```
 
 Generate an image from a caption and metadata:
 
 ```bash
-python -m flowsat.generate \
+python generate.py \
     --ckpt  checkpoints/flowsat-fmow-512 \
     --prompt "An airport surrounded by dry farmland, long grey runway crossing the centre." \
-    --lon 4.40 --lat 51.92 --gsd 0.5 --cloud 0 --date 2016-07-15 \
+    --lon 4.40 --lat 51.92 --gsd 0.5 --cloud 0 --year 2016 --month 7 --day 15 \
     --out sample.png
 ```
 
@@ -111,30 +142,36 @@ Sweep a single metadata field with caption and noise held fixed — the
 controllability demonstration from the paper:
 
 ```bash
-python -m flowsat.sweep \
-    --ckpt checkpoints/flowsat-fmow-512 \
-    --prompt "A farmland in a temperate river valley." \
-    --lon -0.38 --lat 39.47 --axis month --values 1,3,5,7,9,11 \
-    --out sweeps/month/
+for m in 1 3 5 7 9 11; do
+  python generate.py \
+      --ckpt checkpoints/flowsat-fmow-512 \
+      --prompt "A farmland in a temperate river valley." \
+      --lon -0.38 --lat 39.47 --month $m --seed 1234 \
+      --out sweeps/month/$m.png
+done
 ```
+
+The seed is pinned, so the only thing changing across the six frames is the
+month. That is the sweep shown on the project page.
 
 ## Repository layout
 
 ```
-flowsat/
+flowsat-satellite-image/
+├── generate.py              # single-image entry point
 ├── flowsat/
-│   ├── models/          # SatSana backbone + metadata encoders
-│   ├── data/            # dataset adapters and metadata normalisation
-│   ├── flow/            # flow-matching loss and samplers
-│   ├── training/        # training entry points
-│   └── evaluation/      # FID / CLIP / controllability metrics
-├── docs/
-│   ├── NEW_DATASET.md   # ← plug in your own dataset
-│   ├── TRAINING.md
-│   ├── EVALUATION.md
-│   └── index.html       # project page
-├── configs/
-└── scripts/
+│   ├── models/              # SatSana backbone + metadata encoders
+│   ├── data/                # dataset adapters and metadata normalisation
+│   ├── flow/                # flow-matching loss and samplers
+│   ├── training/            # training entry point
+│   ├── inference/           # pipeline wrapper
+│   └── evaluation/          # FID / CLIP / SSIM / LPIPS, and the metric spine
+└── docs/
+    ├── EVALUATION.md        # ← reproduce the reported numbers
+    ├── NEW_DATASET.md       # ← plug in your own dataset
+    ├── CAPTIONING.md
+    ├── METADATA_CONTROLLABILITY.md
+    └── index.html           # project page
 ```
 
 ## Using FlowSat on your own dataset

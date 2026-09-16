@@ -51,6 +51,10 @@ PAGES = {
         "captioning.html", "Guide",
         "Generating captions for a satellite corpus with a VLM, and how the "
         "captioning prompt decides what the model can control."),
+    "EVALUATION.md": (
+        "evaluation.html", "Guide",
+        "The exact protocol behind the reported FID, CLIP, SSIM and LPIPS, and "
+        "what has to match before two runs can be compared at all."),
 }
 
 SHELL = """<!DOCTYPE html>
