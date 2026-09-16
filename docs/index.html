@@ -30,7 +30,7 @@
   --code-bg:#0f1216; --code-fg:#e9edf2;
   --ph-a:#fafbfc; --ph-b:#f1f4f7; --ph-line:#c8ced6;
   --btn-a:#0e8168; --btn-b:var(--acc); --btn-edge:#0a5f4e; --btn-fg:#fff;
-  --globe:#0b6b57; --hair:rgba(15,18,22,.10);
+  --hair:rgba(15,18,22,.10);
   --page-grad:linear-gradient(180deg,#fdfefe 0%,#fff 32%,#fbfcfd 78%,#f7f9fb 100%);
   --grain-blend:multiply; --grain-op:.028; --grat-filter:none; --grat-op:1;
   --lead:#28303a; --code-edge:transparent; --halo:rgba(11,107,87,.30);
@@ -170,7 +170,7 @@ footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
   --code-bg:#070b0e; --code-fg:#dde5ec;
   --ph-a:#111820; --ph-b:#161f27; --ph-line:#2c3a45;
   --btn-a:#2ea888; --btn-b:#1c8a6e; --btn-edge:#35c6a0; --btn-fg:#04120d;
-  --globe:#2fa183; --hair:rgba(255,255,255,.12);
+  --hair:rgba(255,255,255,.12);
   --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
   --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
   --lead:#c6d1db; --code-edge:#1d262d; --halo:rgba(60,201,163,.28);
@@ -191,7 +191,7 @@ footer{padding:38px 0 60px;text-align:center;color:var(--mut);font-size:14.5px}
   --code-bg:#070b0e; --code-fg:#dde5ec;
   --ph-a:#111820; --ph-b:#161f27; --ph-line:#2c3a45;
   --btn-a:#2ea888; --btn-b:#1c8a6e; --btn-edge:#35c6a0; --btn-fg:#04120d;
-  --globe:#2fa183; --hair:rgba(255,255,255,.12);
+  --hair:rgba(255,255,255,.12);
   --page-grad:linear-gradient(180deg,#0c1114 0%,#0b0f12 34%,#0a1013 76%,#080d10 100%);
   --grain-blend:screen; --grain-op:.05; --grat-filter:invert(1); --grat-op:.42;
   --lead:#c6d1db; --code-edge:#1d262d; --halo:rgba(60,201,163,.28);
@@ -331,11 +331,6 @@ body{background:transparent}
 @keyframes pass{0%{left:-45%;opacity:0}8%{opacity:1}
                 92%{opacity:1}100%{left:125%;opacity:0}}
 
-.globe{position:absolute;top:-70px;right:-90px;width:520px;height:520px;
-  opacity:.13;pointer-events:none;z-index:-1}
-.globe .m{animation:meridian 26s linear infinite}
-@keyframes meridian{0%{rx:150px}25%{rx:0px}50%{rx:150px}75%{rx:0px}100%{rx:150px}}
-@media(max-width:900px){.globe{display:none}}
 
 /* panels float over the background instead of covering it */
 section,header{background:transparent}
@@ -360,7 +355,7 @@ section,header{background:transparent}
 .cmp:hover .replay,.replay:focus-visible{opacity:1}
 
 @media(prefers-reduced-motion:reduce){
-  #bg .mesh,#bg .graticule,#bg .scan,.globe .m{animation:none}
+  #bg .mesh,#bg .graticule,#bg .scan{animation:none}
 }
 </style>
 </head>
@@ -386,24 +381,6 @@ section,header{background:transparent}
 </div></nav>
 
 <header>
-<svg class="globe" viewBox="0 0 400 400" aria-hidden="true">
-  <g fill="none" stroke="var(--globe)" stroke-width="1.1">
-    <circle cx="200" cy="200" r="150"/>
-    <ellipse cx="200" cy="76.5" rx="75.0" ry="23.2"/>
-    <ellipse cx="200" cy="128.7" rx="129.9" ry="40.1"/>
-    <ellipse cx="200" cy="200.0" rx="150.0" ry="46.4"/>
-    <ellipse cx="200" cy="271.3" rx="129.9" ry="40.1"/>
-    <ellipse cx="200" cy="323.5" rx="75.0" ry="23.2"/>
-    <ellipse class="m" style="animation-delay:-0s" cx="200" cy="200" rx="150" ry="150"/>
-    <ellipse class="m" style="animation-delay:-3s" cx="200" cy="200" rx="139" ry="150"/>
-    <ellipse class="m" style="animation-delay:-6s" cx="200" cy="200" rx="106" ry="150"/>
-    <ellipse class="m" style="animation-delay:-9s" cx="200" cy="200" rx="57" ry="150"/>
-    <ellipse class="m" style="animation-delay:-12s" cx="200" cy="200" rx="150" ry="150"/>
-    <ellipse class="m" style="animation-delay:-15s" cx="200" cy="200" rx="139" ry="150"/>
-    <ellipse class="m" style="animation-delay:-18s" cx="200" cy="200" rx="106" ry="150"/>
-    <ellipse class="m" style="animation-delay:-21s" cx="200" cy="200" rx="57" ry="150"/>
-  </g>
-</svg>
   <div class="wrap">
     <span class="venue">BMVC 2026</span>
     <h1>FlowSat</h1>
