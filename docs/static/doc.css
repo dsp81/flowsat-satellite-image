@@ -192,6 +192,8 @@ pre:hover .copy,.copy:focus-visible{opacity:1}
 }
 
 /* ---------- background: graticule, drift, satellite pass, grain ----------- */
+/* The canvas carries the theme colour; #bg lays its gradient over it. */
+html{background:var(--bg)}
 body{background:transparent}
 #bg{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
   background:var(--page-grad)}
