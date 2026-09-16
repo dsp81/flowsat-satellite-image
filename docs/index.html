@@ -279,8 +279,8 @@ section,header{background:transparent}
   <span class="brand">FlowSat</span>
   <span class="links" style="display:flex;gap:22px">
     <a href="#explore">Explore</a><a href="#method">Method</a>
-    <a href="#control">Controllability</a>
-    <a href="#results">Results</a><a href="#start">Get started</a>
+    <a href="#results">Results</a><a href="#control">Controllability</a>
+    <a href="#limits">Limitations</a><a href="#start">Get started</a>
     <a href="#cite">Cite</a>
   </span>
   <a href="https://github.com/dsp81/flowsat-satellite-image" style="font-weight:600;color:var(--ink)">GitHub &#8599;</a>
@@ -325,6 +325,17 @@ section,header{background:transparent}
 
 <section class="reveal">
   <div class="wrap">
+    <p class="lead" style="max-width:830px;margin:0 auto 30px;text-align:center">
+      FlowSat generates 512&nbsp;px satellite imagery from a caption <em>and</em> the
+      acquisition metadata that defines how the image was captured &mdash; where on
+      Earth, at what ground resolution, on what date, under how much cloud. Most
+      text-to-image models fold such metadata, when they use it at all, into a
+      single undifferentiated vector added to the timestep embedding. FlowSat
+      encodes each field on its own geometry and injects the result through a
+      zero-initialised graft on the pretrained modulation path, so metadata
+      influence is <em>learned</em> rather than imposed. On FMoW-RGB it reaches
+      FID 31.10 in 20 sampling steps, against 35.27 in 100 for the closest prior
+      work.</p>
     <figure>
       <div class="frame"><img src="static/teaser.jpg" alt="Month sweep" id="teaser"></div>
       <figcaption><strong>Metadata is the dial.</strong> One caption, one noise seed.
@@ -394,13 +405,49 @@ section,header{background:transparent}
       captured as by what it contains. Captions rarely state the season, the
       sensor resolution or the atmosphere &mdash; yet those are exactly what a
       user wants to control.</p>
-    <p>FlowSat conditions on seven acquisition fields alongside text. Rather than
-      folding them into one undifferentiated vector, each is encoded according to
-      its geometry: coordinates are lifted onto the sphere, periodic fields are
-      encoded cyclically, and scalars on their natural scale. The embedding enters
-      through a zero-initialised AdaLN graft, so the model begins identical to its
-      text-to-image initialisation and <em>learns</em> metadata influence rather
-      than having it imposed.</p>
+    <h3>The seven fields</h3>
+    <p>Conditioning is seven numbers, normalised to a common range. A caption
+      almost never states any of them.</p>
+    <table>
+      <thead><tr><th>Field</th><th>Encoded as</th><th>What it moves in the image</th></tr></thead>
+      <tbody>
+        <tr><td>Longitude, latitude</td>
+          <td>Lifted onto the unit sphere, then expanded over many frequencies</td>
+          <td>Biome, building and field geometry, road pattern, materials</td></tr>
+        <tr><td>Month, day</td>
+          <td>Cyclically, so December sits next to January</td>
+          <td>Season &mdash; vegetation, snow, sun angle and shadow length</td></tr>
+        <tr><td>Year</td><td>On its own scale</td>
+          <td>Sensor generation, and how built-up the scene is</td></tr>
+        <tr><td>Ground sample distance</td><td>On its natural metres-per-pixel scale</td>
+          <td>How much ground one pixel covers: scale, and which objects resolve at all</td></tr>
+        <tr><td>Cloud cover</td><td>On its own scale</td>
+          <td>Haze, contrast, and outright occlusion</td></tr>
+      </tbody>
+    </table>
+    <p>Encoding each field on the geometry it actually lives on is the point.
+      Coordinates are a position on a sphere, not two independent numbers, so
+      places either side of the dateline stay neighbours. Dates are a circle, so
+      December neighbours January. Ground resolution is a scalar spanning an
+      order of magnitude. Folding all seven into one flat vector throws that
+      structure away before the model sees it.</p>
+    <p>The resulting embedding does not get its own new pathway into the network.
+      It joins the modulation signal the pretrained backbone already uses, through
+      a projection <strong>initialised to exactly zero</strong> &mdash; so at step
+      0 the model is byte-identical to the text-to-image checkpoint it started
+      from, and every unit of metadata influence has to be earned by gradient
+      descent rather than imposed by construction.</p>
+
+    <h3>Flow matching, not denoising</h3>
+    <p>Training does not add noise in steps and learn to undo it. It draws a
+      straight path between a real latent and a sample of noise,
+      <code>x<sub>t</sub> = (1&minus;t)&middot;x&#8320; + t&middot;&epsilon;</code>,
+      and learns the constant velocity along that path,
+      <code>v = &epsilon; &minus; x&#8320;</code>. Generation integrates the
+      velocity back from noise with an Euler solver. Because the path is straight,
+      few steps suffice &mdash; 20 rather than the 100 a denoising sampler needs.
+      The backbone is natively flow-matched, so time is used directly in [0,&nbsp;1]
+      with no timestep rescaling.</p>
 
     <figure style="margin:24px 0 6px">
       <div class="frame"><img src="static/architecture.svg" alt="Architecture" id="arch"></div>
@@ -408,19 +455,21 @@ section,header{background:transparent}
 
     <div class="grid stag">
       <div class="card"><h4>Geometry-aware encoding</h4>
-        <p>Spherical lift for coordinates, cyclical encoding for dates, natural
-          scaling for GSD and cloud &mdash; ~1.0M parameters, an order of magnitude
-          smaller than a naive per-field MLP and measurably better.</p></div>
+        <p>Sphere for coordinates, circle for dates, natural scale for resolution
+          and cloud &mdash; 1.04M parameters, an order of magnitude smaller than a
+          naive per-field MLP and measurably better.</p></div>
       <div class="card"><h4>Zero-initialised graft</h4>
-        <p>Metadata enters through a zero-init projection: byte-identical to the
-          text-to-image initialisation at step 0, so the pretrained prior is never
-          perturbed.</p></div>
+        <p>Metadata joins the modulation the backbone already uses, through a
+          projection starting at zero. No new pathway, and no perturbation of the
+          pretrained prior at initialisation.</p></div>
       <div class="card"><h4>Flow matching</h4>
-        <p>Velocity prediction on a natively flow-matched backbone &mdash; quality
-          samples in ~20 Euler steps instead of 100 denoising steps.</p></div>
+        <p>Velocity prediction along a straight path, on a backbone pretrained the
+          same way. Quality samples in 20 Euler steps rather than 100 denoising
+          steps.</p></div>
       <div class="card"><h4>Efficient backbone</h4>
-        <p>Sana-0.6B with linear attention and DC-AE 32&times; latents
-          (16&times;16&times;32 at 512 px), with a Gemma-2-2B text encoder.</p></div>
+        <p>Sana-0.6B, linear attention, and a DC-AE compressing 32&times; in each
+          direction &mdash; a whole 512&nbsp;px frame is 256 latent tokens. Text
+          comes from a frozen Gemma-2-2B.</p></div>
     </div>
   </div>
 </section>
@@ -474,7 +523,7 @@ python -m flowsat.evaluation.evaluate_fmow \
 
 <section id="control" class="reveal">
   <div class="wrap">
-    <p class="kicker">Design notes</p>
+    <p class="kicker">Controllability</p>
     <h2>What makes a model metadata-controllable</h2>
     <p class="lead">Metadata conditioning either works or quietly does nothing,
       and the difference is rarely the architecture.</p>
@@ -537,6 +586,44 @@ python -m flowsat.evaluation.evaluate_fmow \
       <a href="controllability.html">Read the full guide</a> &mdash; dataset
       limits, dropout to a learned null embedding, inference prompt design, and
       an ordered checklist for diagnosing weak controllability.</div>
+  </div>
+</section>
+
+<section id="limits" class="reveal">
+  <div class="wrap">
+    <p class="kicker">Limitations</p>
+    <h2>What the numbers above do not show</h2>
+    <p class="lead">Two of the seven fields are demonstrated rather than scored,
+      the paired metrics have a floor well above zero, and FID belongs to a
+      protocol rather than to a model. Worth knowing before comparing anything
+      against this page.</p>
+
+    <div class="grid stag">
+      <div class="card"><h4>Geography is not in the quality table</h4>
+        <p>FMoW's test sidecars carry no coordinates, so longitude and latitude
+          are (0,&nbsp;0) for every scored sample. FID and CLIP exercise date,
+          resolution and cloud cover. Geographic control is evidenced by the
+          sweeps at the top of this page, not by that table.</p></div>
+      <div class="card"><h4>Fields the captions describe stay weak</h4>
+        <p>Resolution is the strongest control because nothing else in the
+          conditioning predicts it. Season, haze and country are named in captions
+          constantly, and a field competing with a large pretrained text encoder
+          for the same variance loses.</p></div>
+      <div class="card"><h4>SSIM and LPIPS have a floor</h4>
+        <p>They are paired against one real acquisition, and two <em>real</em>
+          images of the same place score only 0.214 / 0.425 through this
+          pipeline. They measure whether conditioning recovers a specific
+          acquisition &mdash; not image quality.</p></div>
+      <div class="card"><h4>FID belongs to a protocol</h4>
+        <p>Reference set, sample count, sampler, steps, guidance and caption
+          length all move it, several by more than the gap between two models.
+          Below a few thousand samples the estimate is inflated and ranks
+          checkpoints at best.</p></div>
+      <div class="card"><h4>One domain, one resolution</h4>
+        <p>512&nbsp;px RGB, and FMoW's sensor, geography and category
+          distribution. The adapter interface is built for other corpora, but
+          nothing here measures how the model transfers to one.</p></div>
+    </div>
   </div>
 </section>
 
