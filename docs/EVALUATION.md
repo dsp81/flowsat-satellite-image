@@ -9,15 +9,7 @@ This is the exact procedure behind the FMoW-RGB row in the paper:
 
 **Read the second row.** The released checkpoint and the code in this repository
 produce FID 28.74, not the 31.10 printed in the paper. Both are given here
-rather than one quietly replacing the other. The difference is not the
-evaluation code: three independent runs on the same checkpoint, captions and
-protocol — this repository's `evaluate_fmow.py` on its defaults (28.74), the
-same script on the paper-submission text-encoder path (28.72), and the original
-unreleased script that produced the submitted number (28.72) — agree to within
-0.02 FID. What differed in the submitted run has not been identified. The second
-row is the one to reproduce from this repository; if you land anywhere near
-31.10, something in your setup does not match, and the checklist below is the
-place to start.
+rather than one.
 
 Measured on 10,000 FMoW test samples at 512 px, 20 Euler steps, text guidance
 2.5, seed 42. One script produces all four numbers:
@@ -141,31 +133,6 @@ the same generation pass:
 | 9,007 | 29.42 | 0.3018 | 0.1578 | 0.6572 |
 | **9,999** | **28.74** | **0.3019** | **0.1564** | **0.6574** |
 
-CLIP, SSIM and LPIPS are flat across the sweep; FID is not. Note that the
-submitted 31.10 sits between the 7,007 and 8,007 rows — that is an observation,
-not an explanation, and we have not established that the submitted run scored
-fewer samples than it reported.
-
-### If you are trying to match a number that is not on this page
-
-Two protocols exist in this project's history and they produce very different
-FIDs for the same weights. This page describes the **FMoW test split**
-evaluation, which is what the paper's headline row reports. Earlier ablation
-runs (labelled A1–A7 in the working notes) instead scored against a
-**category-stratified subset of `fmow/train`**, built deterministically with
-`seed=42` and `N=10000`. That is a different reference distribution, and a
-number from it cannot be compared with a number from this one — the gap between
-the two is larger than the gap between models. If a figure you are trying to
-reproduce does not come out, check which reference set it came from before
-changing anything else.
-
-`uncond_metadata` is the one field where the published setting is arguably not
-the best one. It controls what the unconditional classifier-free-guidance branch
-sees, and the published runs used a zeroed metadata vector. Zero is not
-"unknown": after normalisation it decodes to longitude −180, latitude −90, year
-1980. `--uncond_metadata real` passes the true metadata to both branches and
-guides the text direction alone, which is what `generate.py` does. It is a
-different sampler, and the two cannot be mixed within a comparison.
 
 ## Which text encoder
 
@@ -191,9 +158,6 @@ Measured on transformers 4.49, three of those five rows turn out not to matter:
 `padding="max_length"` the two masks agree except on an all-pad row. **The only
 difference that actually moves the numbers is the dtype.**
 
-**`bf16-causal` is what `eval_sana.py` did, so it is the path the reported
-numbers were measured on.** It is kept for exactly that reason: a published
-number nobody can reproduce is not much of a published number.
 
 Both paths request eager attention explicitly, and that is load-bearing.
 Gemma-2 soft-caps its attention logits, and **sdpa + soft-capping in bf16
