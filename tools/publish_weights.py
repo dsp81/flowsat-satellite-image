@@ -65,9 +65,16 @@ Hugging Face cache.
 
 FMoW-RGB test split, {n_samples} samples, 20 Euler steps, text guidance 2.5, seed 42:
 
-| FID ↓ | CLIP ↑ | SSIM ↑ | LPIPS ↓ |
-|---|---|---|---|
-| **31.10** | **0.3016** | 0.1600 | 0.6853 |
+| | FID ↓ | CLIP ↑ | SSIM ↑ | LPIPS ↓ |
+|---|---|---|---|---|
+| As submitted | 31.10 | 0.3016 | 0.1600 | 0.6853 |
+| **These weights** | **28.74** | **0.3019** | **0.1564** | **0.6574** |
+
+**Read the second row.** These weights with the released evaluation code give
+FID 28.74, not the 31.10 printed in the paper. Three independent runs on the
+same checkpoint, captions and protocol agree to within 0.02 FID, so the gap is
+not the evaluation code; what differed in the submitted run has not been
+identified. The second row is what this repo id reproduces.
 
 SSIM and LPIPS are *paired* against each caption's own source image, so they
 measure conditioning fidelity, not image quality — two real FMoW acquisitions of
