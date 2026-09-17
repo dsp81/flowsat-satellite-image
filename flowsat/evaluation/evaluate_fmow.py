@@ -623,7 +623,7 @@ def parse_args():
     paths = p.add_argument_group("paths")
     paths.add_argument("--checkpoint", required=True,
                        help="checkpoint directory, weight file, or Hugging Face "
-                            "repo id (e.g. dsp81/flowsat-fmow-512)")
+                            "repo id (e.g. Djisgod/flowsat-fmow-512)")
     paths.add_argument("--pretrained_sana",
                        default="Efficient-Large-Model/Sana_600M_512px_diffusers",
                        help="Sana snapshot providing the VAE, tokenizer and text encoder")

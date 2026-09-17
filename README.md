@@ -21,9 +21,10 @@ Sustainability Lab, IIT Gandhinagar
 
 ---
 
-> **Status.** Paper accepted at BMVC 2026. Code and pretrained weights are being
-> prepared for public release ahead of the conference (November 2026). The
-> dataset-adapter interface and pipeline documentation are already available in
+> **Status.** Paper accepted at BMVC 2026. Code and pretrained weights are
+> public: the weights are on the Hub at
+> [`Djisgod/flowsat-fmow-512`](https://huggingface.co/Djisgod/flowsat-fmow-512).
+> The dataset-adapter interface and pipeline documentation are in
 > [`docs/`](docs/) — see [Use on Your Own Dataset](docs/NEW_DATASET.md).
 
 ---
@@ -97,14 +98,14 @@ All four metrics come from one script, whose defaults are the published protocol
 pip install -e ".[eval,data]"
 
 python -m flowsat.evaluation.evaluate_fmow \
-    --checkpoint      checkpoints/flowsat-fmow-512 \
+    --checkpoint      Djisgod/flowsat-fmow-512 \
     --pretrained_sana Efficient-Large-Model/Sana_600M_512px_diffusers \
     --fmow_test_root  /path/to/fmow-full/test \
     --caption_root    /path/to/fmow_captions_test \
     --output_dir      evaluations/flowsat-125k
 ```
 
-10,000 test samples, 20 Euler steps, guidance 2.5, seed 42 — roughly 2¼ hours on
+10,000 test samples, 20 Euler steps, guidance 2.5, seed 42 — about an hour on
 one A100. It writes `metrics.json` with the protocol it ran under and a hash of
 it, and prints the measured numbers beside the published ones.
 
@@ -135,8 +136,8 @@ number.
 
 ## Quick start
 
-> The package installs and runs today; pretrained weights are still being
-> prepared for release (see **Status** above).
+> The pretrained weights are on the Hub — pass
+> `Djisgod/flowsat-fmow-512` anywhere a checkpoint path is expected.
 
 ```bash
 git clone https://github.com/dsp81/flowsat-satellite-image.git
@@ -193,14 +194,14 @@ flowsat-satellite-image/
 ## Pretrained weights
 
 The checkpoint is 2.3 GiB, past every GitHub limit, so it is distributed through
-the Hugging Face Hub rather than this repository. **The upload is not live yet**
-— it goes up with the weights release described in **Status** above, at
-`dsp81/flowsat-fmow-512`. Once it is there, both entry points take the repo id
+the Hugging Face Hub rather than this repository. It is live at
+**[`Djisgod/flowsat-fmow-512`](https://huggingface.co/Djisgod/flowsat-fmow-512)**
+(2.28 GiB, fp32, sha256 `b9b64439…0ffb972`). Both entry points take the repo id
 wherever they take a path and download once into the usual cache:
 
 ```bash
-python generate.py --ckpt dsp81/flowsat-fmow-512 --prompt "..."
-python -m flowsat.evaluation.evaluate_fmow --checkpoint dsp81/flowsat-fmow-512 ...
+python generate.py --ckpt Djisgod/flowsat-fmow-512 --prompt "..."
+python -m flowsat.evaluation.evaluate_fmow --checkpoint Djisgod/flowsat-fmow-512 ...
 ```
 
 `tools/publish_weights.py` is what uploads them: it checks that the state dict

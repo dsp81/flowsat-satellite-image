@@ -16,7 +16,7 @@ Measured on 10,000 FMoW test samples at 512 px, 20 Euler steps, text guidance
 
 ```bash
 python -m flowsat.evaluation.evaluate_fmow \
-    --checkpoint      dsp81/flowsat-fmow-512 \
+    --checkpoint      Djisgod/flowsat-fmow-512 \
     --pretrained_sana Efficient-Large-Model/Sana_600M_512px_diffusers \
     --fmow_test_root  /path/to/fmow-full/test \
     --caption_root    /path/to/fmow_captions_test \
@@ -232,8 +232,8 @@ rescan after adding or removing captions.
 repo id:
 
 ```bash
---checkpoint dsp81/flowsat-fmow-512        # downloads once into the HF cache
---checkpoint dsp81/flowsat-fmow-512@v1.0   # a specific revision
+--checkpoint Djisgod/flowsat-fmow-512        # downloads once into the HF cache
+--checkpoint Djisgod/flowsat-fmow-512@v1.0   # a specific revision
 --checkpoint checkpoints/flowsat-fmow-512  # a local directory
 ```
 

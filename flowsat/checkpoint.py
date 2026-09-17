@@ -7,13 +7,13 @@ not:
 
     checkpoints/flowsat-fmow-512          a local directory holding the weights
     checkpoints/flowsat-fmow-512/model_0.pt   a local file
-    dsp81/flowsat-fmow-512                a Hugging Face repo id
+    Djisgod/flowsat-fmow-512                a Hugging Face repo id
 
 The Hub form downloads once into the usual HF cache and is a no-op afterwards,
 so it costs nothing to leave in a script. Two suffixes are understood:
 
-    dsp81/flowsat-fmow-512@v1.0           a revision (branch, tag or commit)
-    dsp81/flowsat-fmow-512:model_0.pt     a specific file in the repo
+    Djisgod/flowsat-fmow-512@v1.0           a revision (branch, tag or commit)
+    Djisgod/flowsat-fmow-512:model_0.pt     a specific file in the repo
 
 Weights are large. If a download is going to happen, this says so before it
 starts rather than appearing to hang.
@@ -85,7 +85,7 @@ def resolve_checkpoint(spec: str, quiet: bool = False) -> Path:
         raise FileNotFoundError(
             f"checkpoint not found: {spec}\n"
             f"        Expected a local directory, a local file, or a Hugging "
-            f"Face repo id such as 'dsp81/flowsat-fmow-512'.")
+            f"Face repo id such as 'Djisgod/flowsat-fmow-512'.")
 
     try:
         from huggingface_hub import hf_hub_download

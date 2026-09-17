@@ -212,7 +212,7 @@ def main():
     p.add_argument("--out", default="output.png")
     p.add_argument("--ckpt", default="checkpoints/flowsat-fmow-512",
                    help="checkpoint directory, weight file, or Hugging Face "
-                        "repo id (e.g. dsp81/flowsat-fmow-512)")
+                        "repo id (e.g. Djisgod/flowsat-fmow-512)")
     p.add_argument("--pretrained",
                    default="Efficient-Large-Model/Sana_600M_512px_diffusers",
                    help="Sana snapshot providing the VAE, tokenizer and text encoder")

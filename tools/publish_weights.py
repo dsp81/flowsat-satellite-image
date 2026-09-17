@@ -10,7 +10,7 @@ model, and it gives the weights a citable page of their own.
     huggingface-cli login            # once, with a write token
     python tools/publish_weights.py \
         --checkpoint /path/to/checkpoint-125000 \
-        --repo-id    dsp81/flowsat-fmow-512
+        --repo-id    Djisgod/flowsat-fmow-512
 
 It checks the state dict before uploading anything, writes a model card naming
 the evaluation protocol the published numbers came from, and prints the sha256
@@ -183,7 +183,7 @@ def main():
                                formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--checkpoint", required=True,
                    help="local checkpoint directory or weight file")
-    p.add_argument("--repo-id", required=True, help="e.g. dsp81/flowsat-fmow-512")
+    p.add_argument("--repo-id", required=True, help="e.g. Djisgod/flowsat-fmow-512")
     p.add_argument("--n-samples", default="10,000",
                    help="sample count quoted in the model card's results table")
     p.add_argument("--private", action="store_true")
