@@ -64,12 +64,23 @@ On FMoW-RGB (512 px):
 |---|---|---|---|
 | DiffusionSat (ICLR'24) | 35.27 | 0.1720 | 100 |
 | GeoDiT-2Σ | 32.11 | — | — |
-| **FlowSat (ours)** | **31.10** | **0.3016** | **20** |
+| FlowSat (ours, as submitted) | 31.10 | 0.3016 | 20 |
+| **FlowSat (ours, this release)** | **28.74** | **0.3019** | **20** |
 
-Three-seed variance: FID 31.53 ± 0.32, CLIP 0.3018 ± 0.0007.
+Three-seed variance, as submitted: FID 31.53 ± 0.32, CLIP 0.3018 ± 0.0007.
 
-FlowSat's paired reconstruction metrics on the same run: **SSIM 0.1600**,
-**LPIPS 0.6853**. These score each generated image against the one real image
+**On the two FlowSat rows.** The released checkpoint and the evaluation code in
+this repository give FID 28.74, not the 31.10 printed in the paper. Both are
+listed rather than one quietly replacing the other. The gap is not the
+evaluation code: three independent runs on the same checkpoint, captions and
+protocol — `evaluate_fmow.py` on its defaults (28.74), the same script on the
+paper-submission text-encoder path (28.72), and the original unreleased script
+that produced the submitted number (28.72) — agree to within 0.02 FID. What
+differed in the submitted run has not been identified. Reproduce 28.74; see
+[docs/EVALUATION.md](docs/EVALUATION.md).
+
+FlowSat's paired reconstruction metrics on the same run: **SSIM 0.1564**,
+**LPIPS 0.6574**. These score each generated image against the one real image
 whose caption and metadata produced it, so they measure conditioning fidelity
 rather than image quality — two *real* FMoW acquisitions of the same place score
 SSIM 0.214 / LPIPS 0.425 through this pipeline, which is the ceiling, not 1.0.

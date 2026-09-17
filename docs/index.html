@@ -416,6 +416,7 @@ section,header{background:transparent}
     <div class="btns">
       <a class="btn" href="#" id="paper">Paper</a>
       <a class="btn g" href="https://github.com/dsp81/flowsat-satellite-image">Code</a>
+      <a class="btn g" href="https://huggingface.co/dsp81/flowsat-fmow-512">Weights</a>
       <a class="btn g" href="https://github.com/dsp81/flowsat-satellite-image/blob/main/docs/NEW_DATASET.md">Your own data</a>
       <a class="btn g" href="#cite">BibTeX</a>
     </div>
@@ -433,7 +434,7 @@ section,header{background:transparent}
       encodes each field on its own geometry and injects the result through a
       zero-initialised graft on the pretrained modulation path, so metadata
       influence is <em>learned</em> rather than imposed. On FMoW-RGB it reaches
-      FID 31.10 in 20 sampling steps, against 35.27 in 100 for the closest prior
+      FID 28.74 in 20 sampling steps, against 35.27 in 100 for the closest prior
       work.</p>
     <figure>
       <div class="frame"><img src="static/teaser.jpg" alt="Month sweep" id="teaser"></div>
@@ -466,7 +467,7 @@ section,header{background:transparent}
         </div>
         <div class="rowlab"><span class="k" id="axis-name">Month</span>
           <span class="v" id="axis-val">July</span></div>
-        <input type="range" id="slider" min="0" max="11" value="6" step="1">
+        <input type="range" id="slider" min="0" max="3" value="0" step="1">
         <div class="ticks" id="ticks"></div>
         <div class="fixed" id="fixed"></div>
         <p class="hint" id="hint"></p>
@@ -583,13 +584,29 @@ section,header{background:transparent}
       <tbody>
         <tr><td>DiffusionSat <span style="color:var(--mut)">(ICLR 2024)</span></td><td class="n">35.27</td><td class="n">0.1720</td><td class="n">100</td></tr>
         <tr><td>GeoDiT-2&Sigma;</td><td class="n">32.11</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
-        <tr class="ours"><td>FlowSat <span style="color:var(--mut)">(ours)</span></td><td class="n">31.10</td><td class="n">0.3016</td><td class="n">20</td></tr>
+        <tr><td>FlowSat <span style="color:var(--mut)">(ours, as submitted)</span></td><td class="n">31.10</td><td class="n">0.3016</td><td class="n">20</td></tr>
+        <tr class="ours"><td>FlowSat <span style="color:var(--mut)">(ours, this release)</span></td><td class="n">28.74</td><td class="n">0.3019</td><td class="n">20</td></tr>
       </tbody>
     </table>
-    <p style="font-size:15px;color:var(--mut)">Three-seed variance: FID 31.53 &plusmn; 0.32,
-      CLIP 0.3018 &plusmn; 0.0007. The step-count advantage derives from flow matching and
-      the DC-AE/Sana backbone rather than from metadata conditioning; the encoder's
-      own contribution is isolated in the ablation.</p>
+    <p style="font-size:15px;color:var(--mut)">Three-seed variance, as submitted:
+      FID 31.53 &plusmn; 0.32, CLIP 0.3018 &plusmn; 0.0007. The step-count advantage
+      derives from flow matching and the DC-AE/Sana backbone rather than from
+      metadata conditioning; the encoder's own contribution is isolated in the
+      ablation.</p>
+
+    <div class="note"><strong>On the two FlowSat rows.</strong> The released
+      checkpoint and the released evaluation code give <strong>FID 28.74</strong>,
+      not the 31.10 printed in the paper. We report both rather than quietly
+      replacing one with the other. The gap is not the evaluation code: three
+      independent runs &mdash; this repository's
+      <code>evaluate_fmow.py</code> on its defaults, the same script on the
+      paper-submission text-encoder path, and the original unreleased script that
+      produced the submitted number &mdash; agree with each other to within
+      <strong>0.02 FID</strong>, all landing at 28.72&ndash;28.74 on the same
+      checkpoint, captions and protocol. We have not identified what differed in
+      the submitted run. The number moved in the favourable direction, and the
+      ranking against prior work is unchanged; the figure to reproduce from this
+      repository is 28.74.</div>
 
     <h3>Reproducing these numbers</h3>
     <p>One script measures all four reported metrics under the published
@@ -599,13 +616,36 @@ section,header{background:transparent}
 <pre><button class="copy">copy</button><code>pip install -e ".[eval,data]"
 
 python -m flowsat.evaluation.evaluate_fmow \
-    --checkpoint     checkpoints/flowsat-fmow-512 \
+    --checkpoint     dsp81/flowsat-fmow-512 \
     --fmow_test_root /path/to/fmow-full/test \
     --caption_root   /path/to/fmow_captions_test \
     --output_dir     evaluations/flowsat</code></pre>
+
+    <p style="font-size:15px;color:var(--mut)">On one A100 the run above takes
+      about 64 minutes and scores 9,999 of 10,000 &mdash; one FMoW test GeoTIFF
+      is unreadable and is dropped rather than substituted.</p>
+
+    <h3>FID against sample count</h3>
+    <p>FID is biased upward at small N, so a number measured at one sample count
+      cannot be compared with a number measured at another. Every row below comes
+      from the <em>same</em> generation pass, read at increasing counts:</p>
+    <table>
+      <thead><tr><th class="n">N scored</th><th class="n">FID &darr;</th><th class="n">CLIP &uarr;</th></tr></thead>
+      <tbody>
+        <tr><td class="n">5,007</td><td class="n">35.93</td><td class="n">0.3021</td></tr>
+        <tr><td class="n">6,007</td><td class="n">33.64</td><td class="n">0.3017</td></tr>
+        <tr><td class="n">7,007</td><td class="n">31.93</td><td class="n">0.3017</td></tr>
+        <tr><td class="n">8,007</td><td class="n">30.43</td><td class="n">0.3019</td></tr>
+        <tr><td class="n">9,007</td><td class="n">29.42</td><td class="n">0.3018</td></tr>
+        <tr class="ours"><td class="n">9,999</td><td class="n">28.74</td><td class="n">0.3019</td></tr>
+      </tbody>
+    </table>
+    <p style="font-size:15px;color:var(--mut)">CLIP is flat across the sweep;
+      FID is not. A run that stops early reports a worse FID than it earned, which
+      is the single most common reason a reproduction disagrees.</p>
     <p style="font-size:15px;color:var(--mut)">The same run reports the paired
-      reconstruction metrics, <strong>SSIM 0.1600</strong> and
-      <strong>LPIPS 0.6853</strong>. Those score each image against the one real
+      reconstruction metrics, <strong>SSIM 0.1564</strong> and
+      <strong>LPIPS 0.6574</strong>. Those score each image against the one real
       acquisition its caption and metadata came from, so they measure
       conditioning fidelity rather than image quality: two <em>real</em> FMoW
       images of the same place reach only SSIM 0.214 / LPIPS 0.425 through the
@@ -741,6 +781,21 @@ python generate.py --prompt "An airport with a long grey runway."</code></pre>
     --lat 45.0 --lon 5.0 --month 7 --gsd 0.5</code></pre>
     <p>Runs on GPU if one is available, CPU otherwise.</p>
 
+    <h3>Pretrained weights</h3>
+    <p>The released model is v1 <code>checkpoint-125000</code> &mdash; 612,119,200
+      parameters, fp32, 2.28&nbsp;GiB. It is the checkpoint every number on this
+      page was measured from.</p>
+    <p class="btns" style="margin:18px 0">
+      <a class="btn" href="https://huggingface.co/dsp81/flowsat-fmow-512">Download the checkpoint</a>
+    </p>
+    <p>Or let the evaluation and generation scripts fetch it for you &mdash;
+      <code>--checkpoint</code> accepts a Hub repo id as readily as a local path:</p>
+<pre><button class="copy">copy</button><code>python -m flowsat.evaluation.evaluate_fmow \
+    --checkpoint dsp81/flowsat-fmow-512 \
+    --fmow_test_root /path/to/fmow-full/test \
+    --caption_root   /path/to/fmow_captions_test \
+    --output_dir     evaluations/flowsat</code></pre>
+
     <h3>Use it on your own dataset</h3>
     <p>FlowSat is not tied to FMoW. Any corpus supplying
       <em>(image, caption, metadata)</em> triples plugs in through a single
@@ -808,17 +863,17 @@ function phFor(el, text, ratio){
    ------------------------------------------------------------------ */
 const AXES = {
   month:{ label:"Month",
-    keys:["01","03","05","07","09","11"],
-    show:["January","March","May","July","September","November"],
-    ticks:["Jan","Jul","Nov"], start:3,
-    fixed:"caption <code>fixed</code> &#183; seed <code>1234</code> &#183; 39.47&deg;N 0.38&deg;W &#183; 0.5 m/px",
+    keys:["07","09","12","02"],
+    show:["July","September","December","February"],
+    ticks:["Jul","Dec","Feb"], start:0,
+    fixed:"from the paper &#183; caption <code>fixed</code> &#183; seed <code>fixed</code> &#183; every other metadata field held",
     hint:"Season changes vegetation and ground colour; the layout stays put." },
   gsd:{ label:"Ground sample distance",
-    keys:["0.3","0.6","1.0","1.5","2.0","3.0"],
-    show:["0.3 m/px","0.6 m/px","1.0 m/px","1.5 m/px","2.0 m/px","3.0 m/px"],
-    ticks:["0.3 m","1.0 m","3.0 m"], start:1,
-    fixed:"caption <code>fixed</code> &#183; seed <code>1234</code> &#183; July &#183; 25.20&deg;N 55.27&deg;E",
-    hint:"Lower GSD means finer detail \u2014 individual vehicles resolve, then vanish." },
+    keys:["0.3","0.6","1.5","3.0"],
+    show:["0.3 m/px","0.6 m/px","1.5 m/px","3.0 m/px"],
+    ticks:["0.3 m","1.5 m","3.0 m"], start:0,
+    fixed:"from the paper &#183; caption <code>fixed</code> &#183; seed <code>fixed</code> &#183; every other metadata field held",
+    hint:"Lower GSD means finer detail \u2014 individual containers resolve, then dissolve." },
   cloud:{ label:"Cloud cover",
     keys:["00","10","25","50","75","90"],
     show:["0 %","10 %","25 %","50 %","75 %","90 %"],

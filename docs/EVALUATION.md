@@ -4,14 +4,27 @@ This is the exact procedure behind the FMoW-RGB row in the paper:
 
 | | FID ↓ | CLIP ↑ | SSIM ↑ | LPIPS ↓ |
 |---|---|---|---|---|
-| **FlowSat** | **31.10** | **0.3016** | 0.1600 | 0.6853 |
+| FlowSat, as submitted | 31.10 | 0.3016 | 0.1600 | 0.6853 |
+| **FlowSat, this release** | **28.74** | **0.3019** | **0.1564** | **0.6574** |
+
+**Read the second row.** The released checkpoint and the code in this repository
+produce FID 28.74, not the 31.10 printed in the paper. Both are given here
+rather than one quietly replacing the other. The difference is not the
+evaluation code: three independent runs on the same checkpoint, captions and
+protocol — this repository's `evaluate_fmow.py` on its defaults (28.74), the
+same script on the paper-submission text-encoder path (28.72), and the original
+unreleased script that produced the submitted number (28.72) — agree to within
+0.02 FID. What differed in the submitted run has not been identified. The second
+row is the one to reproduce from this repository; if you land anywhere near
+31.10, something in your setup does not match, and the checklist below is the
+place to start.
 
 Measured on 10,000 FMoW test samples at 512 px, 20 Euler steps, text guidance
 2.5, seed 42. One script produces all four numbers:
 
 ```bash
 python -m flowsat.evaluation.evaluate_fmow \
-    --checkpoint      checkpoints/flowsat-fmow-512 \
+    --checkpoint      dsp81/flowsat-fmow-512 \
     --pretrained_sana Efficient-Large-Model/Sana_600M_512px_diffusers \
     --fmow_test_root  /path/to/fmow-full/test \
     --caption_root    /path/to/fmow_captions_test \
@@ -42,7 +55,7 @@ Four inputs:
 | **FMoW test split** | The RGB test split, one directory per sequence: `<seq_id>/<stem>_rgb.tif` beside `<stem>_rgb.json`. |
 | **Captions** | One `.txt` per image, mirroring that layout under `<caption_root>/test/<seq_id>/<stem>.txt`. These are the VLM captions described in [Captioning a dataset](CAPTIONING.md); the numbers above were measured with them. |
 
-A 10,000-sample run takes roughly 2¼ hours on one A100, dominated by sampling.
+A 10,000-sample run takes about an hour on one A100, dominated by sampling.
 Read the test images from local disk rather than network storage — streaming
 GeoTIFFs over NFS inside the loop starves the data loader and can stall a run
 outright.
@@ -53,8 +66,8 @@ outright.
 distribution of the 10,000 generated images against the distribution of the
 10,000 real images they were conditioned on. CLIP score is the cosine
 similarity between each generated image and its caption, under
-`openai/clip-vit-base-patch16`. The script reports it ×100 (30.16); the paper
-reports the fraction (0.3016).
+`openai/clip-vit-base-patch16`. The script reports it ×100 (30.19); the tables
+on this page report the fraction (0.3019).
 
 **SSIM** and **LPIPS** are *paired*: each generated image is scored against the
 one specific real image whose caption and metadata produced it. They measure
@@ -63,7 +76,7 @@ quality. Read them against a floor measured the same way:
 
 | | SSIM | LPIPS |
 |---|---|---|
-| FlowSat vs. its source image | 0.160 | 0.685 |
+| FlowSat vs. its source image | 0.156 | 0.657 |
 | **Two real images of the same place** | **0.214** | **0.425** |
 
 Two genuine FMoW acquisitions of one location, taken months apart, only reach
@@ -115,6 +128,23 @@ run that produces the headline number. The curve lands in `metrics.json` under
 is upward at small N. That is worth internalising before comparing against a
 published FID measured at an unstated N: a lower number is not automatically a
 better model.
+
+This is the curve the released checkpoint actually produces, every row read from
+the same generation pass:
+
+| N scored | FID ↓ | CLIP ↑ | SSIM ↑ | LPIPS ↓ |
+|---:|---:|---:|---:|---:|
+| 5,007 | 35.93 | 0.3021 | 0.1585 | 0.6575 |
+| 6,007 | 33.64 | 0.3017 | 0.1581 | 0.6579 |
+| 7,007 | 31.93 | 0.3017 | 0.1574 | 0.6582 |
+| 8,007 | 30.43 | 0.3019 | 0.1575 | 0.6568 |
+| 9,007 | 29.42 | 0.3018 | 0.1578 | 0.6572 |
+| **9,999** | **28.74** | **0.3019** | **0.1564** | **0.6574** |
+
+CLIP, SSIM and LPIPS are flat across the sweep; FID is not. Note that the
+submitted 31.10 sits between the 7,007 and 8,007 rows — that is an observation,
+not an explanation, and we have not established that the submitted run scored
+fewer samples than it reported.
 
 ### If you are trying to match a number that is not on this page
 
